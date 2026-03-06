@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MonthStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum SavingCategory {
+  AJO
+  OTHER
+}
+
+enum ProjectStatus {
+  PLANNED
+  COMPLETED
+}
+
+model Month {
+  id               String      @id @default(cuid())
+  userId           String
+  label            String
+  year             Int
+  month            Int
+  status           MonthStatus @default(DRAFT)
+  remainingBalance Float       @default(0)
+  photoUrl         String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  incomes  Income[]
+  expenses Expense[]
+  savings  Saving[]
+
+  @@index([userId])
+}
+
+model Income {
+  id      String @id @default(cuid())
+  monthId String
+  label   String
+  amount  Float
+
+  month Month @relation(fields: [monthId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id       String  @id @default(cuid())
+  monthId  String
+  label    String
+  amount   Float
+  category String?
+
+  month Month @relation(fields: [monthId], references: [id], onDelete: Cascade)
+}
+
+model Saving {
+  id       String         @id @default(cuid())
+  monthId  String
+  label    String
+  amount   Float
+  category SavingCategory @default(OTHER)
+
+  month Month @relation(fields: [monthId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  userId       String
+  title        String
+  targetAmount Float
+  savedAmount  Float         @default(0)
+  status       ProjectStatus @default(PLANNED)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+}
