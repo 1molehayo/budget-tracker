@@ -64,7 +64,7 @@ export default async function InsightsPage() {
           { label: "Avg Income", value: formatCurrency(avgIncome), color: "text-emerald-600", bg: "bg-emerald-50" },
           { label: "Avg Expenses", value: formatCurrency(avgExpenses), color: "text-red-500", bg: "bg-red-50" },
           { label: "Avg Savings", value: formatCurrency(avgSavings), color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Avg Savings Rate", value: `${savingsRateAvg.toFixed(1)}%`, color: "text-violet-700", bg: "bg-violet-50" },
+          { label: "Avg Savings Rate", value: `${(isNaN(savingsRateAvg) ? 0 : savingsRateAvg).toFixed(1)}%`, color: "text-violet-700", bg: "bg-violet-50" },
         ].map((kpi) => (
           <div key={kpi.label} className={`${kpi.bg} rounded-2xl p-4`}>
             <p className="text-xs font-medium text-gray-500">{kpi.label}</p>
