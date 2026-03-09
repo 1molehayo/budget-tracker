@@ -6,11 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum MonthStatus {
-  DRAFT
-  PUBLISHED
-}
-
 enum SavingCategory {
   AJO
   OTHER
@@ -18,26 +13,26 @@ enum SavingCategory {
 
 enum ProjectStatus {
   PLANNED
+  ONGOING
   COMPLETED
 }
 
 model Month {
-  id               String      @id @default(cuid())
-  userId           String
-  label            String
-  year             Int
-  month            Int
-  status           MonthStatus @default(DRAFT)
-  remainingBalance Float       @default(0)
-  photoUrl         String?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                       String   @id @default(cuid())
+  userId                   String
+  label                    String
+  year                     Int
+  month                    Int
+  remainingBalanceOverride Float?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
-  incomes  Income[]
-  expenses Expense[]
-  savings  Saving[]
+  incomes         Income[]
+  budgetLineItems BudgetLineItem[]
+  savings         Saving[]
 
   @@index([userId])
+  @@unique([userId, year, month])
 }
 
 model Income {
@@ -49,8 +44,8 @@ model Income {
   month Month @relation(fields: [monthId], references: [id], onDelete: Cascade)
 }
 
-model Expense {
-  id       String  @id @default(cuid())
+model BudgetLineItem {
+  id       String @id @default(cuid())
   monthId  String
   label    String
   amount   Float

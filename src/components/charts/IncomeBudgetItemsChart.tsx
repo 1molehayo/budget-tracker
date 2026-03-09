@@ -13,7 +13,7 @@ import {
 import type { ChartDataPoint } from "@/types";
 import { formatCurrency } from "@/utils/format";
 
-interface IncomeExpenseChartProps {
+interface IncomeBudgetItemsChartProps {
   data: ChartDataPoint[];
 }
 
@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }: {
   );
 };
 
-export function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
+export function IncomeBudgetItemsChart({ data }: IncomeBudgetItemsChartProps) {
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
@@ -52,7 +52,7 @@ export function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
         <Tooltip content={<CustomTooltip />} />
         <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }} />
         <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" />
-        <Bar dataKey="expenses" fill="#f87171" radius={[4, 4, 0, 0]} name="Expenses" />
+        <Bar dataKey="budgetItems" fill="#f87171" radius={[4, 4, 0, 0]} name="Budget Items" />
         <Bar dataKey="savings" fill="#60a5fa" radius={[4, 4, 0, 0]} name="Savings" />
       </BarChart>
     </ResponsiveContainer>

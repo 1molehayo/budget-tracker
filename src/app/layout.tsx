@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BudgetTracker — Household Finance",
-  description: "Track your household income, expenses, and savings with ease.",
+  description: "Track your household income, budget items, and savings with ease.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

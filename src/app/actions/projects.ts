@@ -43,7 +43,9 @@ export async function updateProject(id: string, formData: FormData) {
   const targetAmount = parseFloat(formData.get("targetAmount") as string);
   const savedAmount = parseFloat(formData.get("savedAmount") as string) || 0;
   const notes = (formData.get("notes") as string) || null;
-  const status = (formData.get("status") as string) === "COMPLETED" ? "COMPLETED" : "PLANNED";
+  const rawStatus = formData.get("status") as string;
+  const status =
+    rawStatus === "COMPLETED" ? "COMPLETED" : rawStatus === "ONGOING" ? "ONGOING" : "PLANNED";
 
   await prisma.project.update({
     where: { id },

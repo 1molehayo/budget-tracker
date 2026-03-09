@@ -1,13 +1,10 @@
 import Link from "next/link";
 import type { Month } from "@/types";
 import { formatMonthYear, formatCurrency } from "@/utils/format";
-import { Badge } from "@/components/ui/Badge";
 
 interface RecentMonthsProps {
   months: (Month & {
-    _count?: { incomes: number; expenses: number };
     totalIncome?: number;
-    totalExpenses?: number;
   })[];
 }
 
@@ -18,7 +15,7 @@ export function RecentMonths({ months }: RecentMonthsProps) {
         <svg className="mx-auto h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <p className="text-sm">No months yet. Create your first month!</p>
+        <p className="text-sm">No months yet. Create your first month.</p>
       </div>
     );
   }
@@ -42,16 +39,11 @@ export function RecentMonths({ months }: RecentMonthsProps) {
               <p className="text-xs text-gray-500">{formatMonthYear(month.year, month.month)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {month.totalIncome !== undefined && (
-              <span className="text-sm font-medium text-gray-900 hidden sm:block">
-                {formatCurrency(month.totalIncome)}
-              </span>
-            )}
-            <Badge variant={month.status === "PUBLISHED" ? "success" : "warning"}>
-              {month.status}
-            </Badge>
-          </div>
+          {month.totalIncome !== undefined && (
+            <span className="text-sm font-medium text-gray-900 hidden sm:block">
+              {formatCurrency(month.totalIncome)}
+            </span>
+          )}
         </Link>
       ))}
     </div>

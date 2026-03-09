@@ -1,48 +1,61 @@
-import type { Income, Expense, Saving, MonthWithDetails } from "@/types";
+import type { Income, BudgetLineItem, Saving, MonthWithDetails } from "@/types";
 
 export function calculateTotalIncome(incomes: Income[]): number {
-  return incomes.reduce((sum, i) => sum + i.amount, 0);
+  return incomes.reduce((sum, item) => sum + item.amount, 0);
 }
 
-export function calculateTotalExpenses(expenses: Expense[]): number {
-  return expenses.reduce((sum, e) => sum + e.amount, 0);
+export function calculateTotalBudgetLineItems(lineItems: BudgetLineItem[]): number {
+  return lineItems.reduce((sum, item) => sum + item.amount, 0);
 }
 
 export function calculateTotalSavings(savings: Saving[]): number {
-  return savings.reduce((sum, s) => sum + s.amount, 0);
+  return savings.reduce((sum, item) => sum + item.amount, 0);
 }
 
-export function calculateRemainingBalance(
+export function calculateComputedRemainingBalance(
   incomes: Income[],
-  expenses: Expense[],
+  lineItems: BudgetLineItem[],
   savings: Saving[]
 ): number {
   const totalIncome = calculateTotalIncome(incomes);
-  const totalExpenses = calculateTotalExpenses(expenses);
+  const totalLineItems = calculateTotalBudgetLineItems(lineItems);
   const totalSavings = calculateTotalSavings(savings);
-  return totalIncome - totalExpenses - totalSavings;
+  return totalIncome - totalLineItems - totalSavings;
+}
+
+export function getMonthRemainingBalance(month: MonthWithDetails): number {
+  if (month.remainingBalanceOverride !== null && month.remainingBalanceOverride !== undefined) {
+    return month.remainingBalanceOverride;
+  }
+
+  return calculateComputedRemainingBalance(month.incomes, month.budgetLineItems, month.savings);
 }
 
 export function calculateMonthSummary(month: MonthWithDetails) {
   const totalIncome = calculateTotalIncome(month.incomes);
-  const totalExpenses = calculateTotalExpenses(month.expenses);
+  const totalBudgetLineItems = calculateTotalBudgetLineItems(month.budgetLineItems);
   const totalSavings = calculateTotalSavings(month.savings);
-  const remaining = totalIncome - totalExpenses - totalSavings;
+  const computedRemaining = totalIncome - totalBudgetLineItems - totalSavings;
+  const remaining =
+    month.remainingBalanceOverride !== null && month.remainingBalanceOverride !== undefined
+      ? month.remainingBalanceOverride
+      : computedRemaining;
   const savingsRate = totalIncome > 0 ? (totalSavings / totalIncome) * 100 : 0;
 
   return {
     totalIncome,
-    totalExpenses,
+    totalBudgetLineItems,
     totalSavings,
     remaining,
+    computedRemaining,
     savingsRate,
   };
 }
 
-export function groupExpensesByCategory(expenses: Expense[]): Record<string, number> {
-  return expenses.reduce<Record<string, number>>((acc, expense) => {
-    const category = expense.category || "Uncategorized";
-    acc[category] = (acc[category] || 0) + expense.amount;
+export function groupBudgetLineItemsByCategory(lineItems: BudgetLineItem[]): Record<string, number> {
+  return lineItems.reduce<Record<string, number>>((acc, lineItem) => {
+    const category = lineItem.category || "Uncategorized";
+    acc[category] = (acc[category] || 0) + lineItem.amount;
     return acc;
   }, {});
 }

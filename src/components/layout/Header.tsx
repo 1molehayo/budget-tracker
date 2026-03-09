@@ -14,8 +14,6 @@ const PAGE_TITLES: Record<string, string> = {
 
 function getPageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  if (pathname.startsWith("/months/new")) return "New Month";
-  if (pathname.match(/\/months\/[^/]+\/edit/)) return "Edit Month";
   if (pathname.match(/\/months\/[^/]+/)) return "Month Details";
   return "Budget Tracker";
 }

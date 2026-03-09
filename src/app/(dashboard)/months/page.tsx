@@ -1,80 +1,104 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { MonthCard } from "@/components/months/MonthCard";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { createMonth } from "@/app/actions/months";
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 export default async function MonthsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const months = await prisma.month.findMany({
     where: { userId: user!.id },
-    include: { incomes: true, expenses: true, savings: true },
+    include: { incomes: true, budgetLineItems: true, savings: true },
     orderBy: [{ year: "desc" }, { month: "desc" }],
   });
 
-  const monthsWithTotals = months.map((m) => ({
-    ...m,
-    totalIncome: m.incomes.reduce((s, i) => s + i.amount, 0),
-    totalExpenses: m.expenses.reduce((s, e) => s + e.amount, 0),
-    totalSavings: m.savings.reduce((s, sv) => s + sv.amount, 0),
-  }));
+  const monthsWithTotals = months.map((month) => {
+    const totalIncome = month.incomes.reduce((sum, item) => sum + item.amount, 0);
+    const totalBudgetLineItems = month.budgetLineItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalSavings = month.savings.reduce((sum, item) => sum + item.amount, 0);
+    const computedRemaining = totalIncome - totalBudgetLineItems - totalSavings;
+    const remainingBalance =
+      month.remainingBalanceOverride === null || month.remainingBalanceOverride === undefined
+        ? computedRemaining
+        : month.remainingBalanceOverride;
 
-  const published = monthsWithTotals.filter((m) => m.status === "PUBLISHED");
-  const drafts = monthsWithTotals.filter((m) => m.status === "DRAFT");
+    return {
+      ...month,
+      totalIncome,
+      totalBudgetLineItems,
+      totalSavings,
+      remainingBalance,
+    };
+  });
+
+  const now = new Date();
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Monthly Budgets</h2>
-          <p className="text-gray-500 mt-1">{months.length} months tracked</p>
-        </div>
-        <Link href="/months/new">
-          <Button>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Month
-          </Button>
-        </Link>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Monthly Budgets</h2>
+        <p className="text-gray-500 mt-1">{months.length} months tracked</p>
       </div>
 
-      {months.length === 0 && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Create Month</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={createMonth} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <Input name="label" label="Label" defaultValue={`${MONTHS[now.getMonth()]} ${now.getFullYear()}`} required />
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700" htmlFor="month">Month</label>
+              <select
+                id="month"
+                name="month"
+                defaultValue={String(now.getMonth() + 1)}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                {MONTHS.map((name, index) => (
+                  <option key={name} value={index + 1}>{name}</option>
+                ))}
+              </select>
+            </div>
+            <Input name="year" label="Year" type="number" defaultValue={String(now.getFullYear())} required />
+            <div className="self-end">
+              <Button type="submit" className="w-full">Create</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {months.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
-          <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="h-8 w-8 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-1">No months yet</h3>
-          <p className="text-gray-500 mb-6">Start by creating your first budget month.</p>
-          <Link href="/months/new">
-            <Button>Create your first month</Button>
-          </Link>
+          <p className="text-gray-500">Create your first monthly budget.</p>
         </div>
-      )}
-
-      {drafts.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Drafts ({drafts.length})</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {drafts.map((month) => (
-              <MonthCard key={month.id} month={month} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {published.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Published ({published.length})</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {published.map((month) => (
-              <MonthCard key={month.id} month={month} />
-            ))}
-          </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {monthsWithTotals.map((month) => (
+            <MonthCard key={month.id} month={month} />
+          ))}
         </div>
       )}
     </div>

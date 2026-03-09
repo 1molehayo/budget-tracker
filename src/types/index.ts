@@ -1,6 +1,5 @@
-export type MonthStatus = "DRAFT" | "PUBLISHED";
 export type SavingCategory = "AJO" | "OTHER";
-export type ProjectStatus = "PLANNED" | "COMPLETED";
+export type ProjectStatus = "PLANNED" | "ONGOING" | "COMPLETED";
 
 export interface Income {
   id: string;
@@ -9,7 +8,7 @@ export interface Income {
   amount: number;
 }
 
-export interface Expense {
+export interface BudgetLineItem {
   id: string;
   monthId: string;
   label: string;
@@ -31,13 +30,11 @@ export interface Month {
   label: string;
   year: number;
   month: number;
-  status: MonthStatus;
-  remainingBalance: number;
-  photoUrl?: string | null;
+  remainingBalanceOverride?: number | null;
   createdAt: Date;
   updatedAt: Date;
   incomes?: Income[];
-  expenses?: Expense[];
+  budgetLineItems?: BudgetLineItem[];
   savings?: Saving[];
 }
 
@@ -55,30 +52,22 @@ export interface Project {
 
 export interface MonthWithDetails extends Month {
   incomes: Income[];
-  expenses: Expense[];
+  budgetLineItems: BudgetLineItem[];
   savings: Saving[];
 }
 
 export interface DashboardStats {
   totalMonths: number;
-  publishedMonths: number;
   avgMonthlyIncome: number;
-  avgMonthlyExpenses: number;
+  avgMonthlyBudgetItems: number;
   avgMonthlySavings: number;
   totalProjects: number;
-}
-
-export interface MockOcrResult {
-  label: string;
-  incomes: Omit<Income, "id" | "monthId">[];
-  expenses: Array<{ label: string; amount: number; category?: string }>;
-  savings: Omit<Saving, "id" | "monthId">[];
 }
 
 export interface ChartDataPoint {
   month: string;
   income: number;
-  expenses: number;
+  budgetItems: number;
   savings: number;
   remaining: number;
 }

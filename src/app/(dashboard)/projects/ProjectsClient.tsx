@@ -170,6 +170,7 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
               <label className="text-sm font-medium text-gray-700">Status</label>
               <select name="status" defaultValue={editingProject.status} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
                 <option value="PLANNED">PLANNED</option>
+                <option value="ONGOING">ONGOING</option>
                 <option value="COMPLETED">COMPLETED</option>
               </select>
             </div>

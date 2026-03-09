@@ -1,17 +1,17 @@
-import type { Expense } from "@/types";
+import type { BudgetLineItem } from "@/types";
 import { formatCurrency } from "@/utils/format";
 
-interface ExpenseTableProps {
-  expenses: Expense[];
+interface BudgetLineItemsTableProps {
+  lineItems: BudgetLineItem[];
   showActions?: boolean;
   onDelete?: (id: string) => void;
 }
 
-export function ExpenseTable({ expenses, showActions, onDelete }: ExpenseTableProps) {
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+export function BudgetLineItemsTable({ lineItems, showActions, onDelete }: BudgetLineItemsTableProps) {
+  const total = lineItems.reduce((sum, item) => sum + item.amount, 0);
 
-  if (expenses.length === 0) {
-    return <p className="text-sm text-gray-400 italic py-4 text-center">No expense entries yet.</p>;
+  if (lineItems.length === 0) {
+    return <p className="text-sm text-gray-400 italic py-4 text-center">No budget line items yet.</p>;
   }
 
   return (
@@ -26,25 +26,25 @@ export function ExpenseTable({ expenses, showActions, onDelete }: ExpenseTablePr
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
-          {expenses.map((expense) => (
-            <tr key={expense.id} className="hover:bg-gray-50/50">
-              <td className="py-2.5 px-3 font-medium text-gray-900">{expense.label}</td>
+          {lineItems.map((lineItem) => (
+            <tr key={lineItem.id} className="hover:bg-gray-50/50">
+              <td className="py-2.5 px-3 font-medium text-gray-900">{lineItem.label}</td>
               <td className="py-2.5 px-3">
-                {expense.category ? (
+                {lineItem.category ? (
                   <span className="inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">
-                    {expense.category}
+                    {lineItem.category}
                   </span>
                 ) : (
-                  <span className="text-gray-400 text-xs">—</span>
+                  <span className="text-gray-400 text-xs">-</span>
                 )}
               </td>
               <td className="py-2.5 px-3 text-right font-semibold text-red-500">
-                {formatCurrency(expense.amount)}
+                {formatCurrency(lineItem.amount)}
               </td>
               {showActions && onDelete && (
                 <td className="py-2.5 px-3">
                   <button
-                    onClick={() => onDelete(expense.id)}
+                    onClick={() => onDelete(lineItem.id)}
                     className="text-gray-300 hover:text-red-500 transition-colors"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

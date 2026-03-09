@@ -7,21 +7,47 @@ import { createClient } from "@/lib/supabase/server";
 
 async function getUser() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
   return user;
+}
+
+async function assertMonthOwnership(monthId: string, userId: string) {
+  const month = await prisma.month.findFirst({
+    where: { id: monthId, userId },
+    select: { id: true },
+  });
+
+  if (!month) {
+    throw new Error("Month not found");
+  }
+}
+
+function revalidateBudgetViews(monthId?: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/months");
+  revalidatePath("/insights");
+  revalidatePath("/export");
+  if (monthId) {
+    revalidatePath(`/months/${monthId}`);
+  }
 }
 
 export async function createMonth(formData: FormData) {
   const user = await getUser();
 
-  const label = formData.get("label") as string;
-  const year = parseInt(formData.get("year") as string);
-  const month = parseInt(formData.get("month") as string);
-  const status = (formData.get("status") as string) || "DRAFT";
+  const label = (formData.get("label") as string)?.trim();
+  const year = Number(formData.get("year"));
+  const month = Number(formData.get("month"));
 
-  if (!label || !year || !month) {
-    throw new Error("Missing required fields");
+  if (!label || !Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error("Invalid month data");
   }
 
   const newMonth = await prisma.month.create({
@@ -30,188 +56,141 @@ export async function createMonth(formData: FormData) {
       label,
       year,
       month,
-      status: status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
-      remainingBalance: 0,
     },
   });
 
-  revalidatePath("/months");
-  revalidatePath("/dashboard");
-  redirect(`/months/${newMonth.id}/edit`);
+  revalidateBudgetViews(newMonth.id);
+  redirect(`/months/${newMonth.id}`);
 }
 
-export async function createMonthFromOcr(data: {
-  label: string;
-  year: number;
-  month: number;
-  incomes: Array<{ label: string; amount: number }>;
-  expenses: Array<{ label: string; amount: number; category?: string }>;
-  savings: Array<{ label: string; amount: number; category: "AJO" | "OTHER" }>;
-}) {
+export async function updateMonth(formData: FormData) {
   const user = await getUser();
 
-  const totalIncome = data.incomes.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = data.expenses.reduce((s, e) => s + e.amount, 0);
-  const totalSavings = data.savings.reduce((s, sv) => s + sv.amount, 0);
-  const remaining = totalIncome - totalExpenses - totalSavings;
+  const id = formData.get("id") as string;
+  const label = (formData.get("label") as string)?.trim();
+  const remainingBalanceInput = formData.get("remainingBalanceOverride") as string;
 
-  const newMonth = await prisma.month.create({
-    data: {
-      userId: user.id,
-      label: data.label,
-      year: data.year,
-      month: data.month,
-      status: "DRAFT",
-      remainingBalance: remaining,
-      incomes: { create: data.incomes },
-      expenses: { create: data.expenses },
-      savings: { create: data.savings },
-    },
-  });
+  if (!id || !label) {
+    throw new Error("Invalid month update data");
+  }
 
-  revalidatePath("/months");
-  revalidatePath("/dashboard");
-  return newMonth.id;
-}
+  await assertMonthOwnership(id, user.id);
 
-export async function updateMonth(id: string, formData: FormData) {
-  await getUser();
-
-  const label = formData.get("label") as string;
-  const remainingBalance = parseFloat(formData.get("remainingBalance") as string);
-  const status = formData.get("status") as string;
+  const remainingBalanceOverride =
+    remainingBalanceInput?.trim().length > 0 ? Number(remainingBalanceInput) : null;
 
   await prisma.month.update({
     where: { id },
     data: {
       label,
-      remainingBalance: isNaN(remainingBalance) ? 0 : remainingBalance,
-      status: status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+      remainingBalanceOverride:
+        remainingBalanceOverride === null || Number.isNaN(remainingBalanceOverride)
+          ? null
+          : remainingBalanceOverride,
     },
   });
 
-  revalidatePath(`/months/${id}`);
-  revalidatePath("/months");
-  revalidatePath("/dashboard");
-}
-
-export async function publishMonth(id: string) {
-  await getUser();
-
-  const month = await prisma.month.findUnique({
-    where: { id },
-    include: { incomes: true, expenses: true, savings: true },
-  });
-
-  if (!month) throw new Error("Month not found");
-
-  const totalIncome = month.incomes.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = month.expenses.reduce((s, e) => s + e.amount, 0);
-  const totalSavings = month.savings.reduce((s, sv) => s + sv.amount, 0);
-  const remaining = totalIncome - totalExpenses - totalSavings;
-
-  await prisma.month.update({
-    where: { id },
-    data: { status: "PUBLISHED", remainingBalance: remaining },
-  });
-
-  revalidatePath(`/months/${id}`);
-  revalidatePath("/months");
-  revalidatePath("/dashboard");
+  revalidateBudgetViews(id);
 }
 
 export async function deleteMonth(id: string) {
-  await getUser();
+  const user = await getUser();
+  await assertMonthOwnership(id, user.id);
   await prisma.month.delete({ where: { id } });
-  revalidatePath("/months");
-  revalidatePath("/dashboard");
+  revalidateBudgetViews();
   redirect("/months");
 }
 
 export async function addIncome(monthId: string, formData: FormData) {
-  await getUser();
+  const user = await getUser();
+  await assertMonthOwnership(monthId, user.id);
 
-  const label = formData.get("label") as string;
-  const amount = parseFloat(formData.get("amount") as string);
+  const label = (formData.get("label") as string)?.trim();
+  const amount = Number(formData.get("amount"));
 
-  if (!label || isNaN(amount)) throw new Error("Invalid income data");
+  if (!label || Number.isNaN(amount)) {
+    throw new Error("Invalid income data");
+  }
 
-  await prisma.income.create({ data: { monthId, label, amount } });
-  await recalcRemaining(monthId);
-  revalidatePath(`/months/${monthId}`);
-  revalidatePath(`/months/${monthId}/edit`);
+  await prisma.income.create({
+    data: {
+      monthId,
+      label,
+      amount,
+    },
+  });
+
+  revalidateBudgetViews(monthId);
 }
 
 export async function deleteIncome(id: string, monthId: string) {
-  await getUser();
+  const user = await getUser();
+  await assertMonthOwnership(monthId, user.id);
+
   await prisma.income.delete({ where: { id } });
-  await recalcRemaining(monthId);
-  revalidatePath(`/months/${monthId}`);
-  revalidatePath(`/months/${monthId}/edit`);
+  revalidateBudgetViews(monthId);
 }
 
-export async function addExpense(monthId: string, formData: FormData) {
-  await getUser();
+export async function addBudgetLineItem(monthId: string, formData: FormData) {
+  const user = await getUser();
+  await assertMonthOwnership(monthId, user.id);
 
-  const label = formData.get("label") as string;
-  const amount = parseFloat(formData.get("amount") as string);
-  const category = (formData.get("category") as string) || null;
+  const label = (formData.get("label") as string)?.trim();
+  const amount = Number(formData.get("amount"));
+  const category = ((formData.get("category") as string) || null)?.trim() || null;
 
-  if (!label || isNaN(amount)) throw new Error("Invalid expense data");
+  if (!label || Number.isNaN(amount)) {
+    throw new Error("Invalid budget line item data");
+  }
 
-  await prisma.expense.create({ data: { monthId, label, amount, category } });
-  await recalcRemaining(monthId);
-  revalidatePath(`/months/${monthId}`);
-  revalidatePath(`/months/${monthId}/edit`);
+  await prisma.budgetLineItem.create({
+    data: {
+      monthId,
+      label,
+      amount,
+      category,
+    },
+  });
+
+  revalidateBudgetViews(monthId);
 }
 
-export async function deleteExpense(id: string, monthId: string) {
-  await getUser();
-  await prisma.expense.delete({ where: { id } });
-  await recalcRemaining(monthId);
-  revalidatePath(`/months/${monthId}`);
-  revalidatePath(`/months/${monthId}/edit`);
+export async function deleteBudgetLineItem(id: string, monthId: string) {
+  const user = await getUser();
+  await assertMonthOwnership(monthId, user.id);
+
+  await prisma.budgetLineItem.delete({ where: { id } });
+  revalidateBudgetViews(monthId);
 }
 
 export async function addSaving(monthId: string, formData: FormData) {
-  await getUser();
+  const user = await getUser();
+  await assertMonthOwnership(monthId, user.id);
 
-  const label = formData.get("label") as string;
-  const amount = parseFloat(formData.get("amount") as string);
-  const category = (formData.get("category") as string) as "AJO" | "OTHER";
+  const label = (formData.get("label") as string)?.trim();
+  const amount = Number(formData.get("amount"));
+  const category = (formData.get("category") as string) === "AJO" ? "AJO" : "OTHER";
 
-  if (!label || isNaN(amount)) throw new Error("Invalid saving data");
+  if (!label || Number.isNaN(amount)) {
+    throw new Error("Invalid saving data");
+  }
 
   await prisma.saving.create({
-    data: { monthId, label, amount, category: category === "AJO" ? "AJO" : "OTHER" },
+    data: {
+      monthId,
+      label,
+      amount,
+      category,
+    },
   });
-  await recalcRemaining(monthId);
-  revalidatePath(`/months/${monthId}`);
-  revalidatePath(`/months/${monthId}/edit`);
+
+  revalidateBudgetViews(monthId);
 }
 
 export async function deleteSaving(id: string, monthId: string) {
-  await getUser();
+  const user = await getUser();
+  await assertMonthOwnership(monthId, user.id);
+
   await prisma.saving.delete({ where: { id } });
-  await recalcRemaining(monthId);
-  revalidatePath(`/months/${monthId}`);
-  revalidatePath(`/months/${monthId}/edit`);
-}
-
-async function recalcRemaining(monthId: string) {
-  const month = await prisma.month.findUnique({
-    where: { id: monthId },
-    include: { incomes: true, expenses: true, savings: true },
-  });
-  if (!month) return;
-
-  const totalIncome = month.incomes.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = month.expenses.reduce((s, e) => s + e.amount, 0);
-  const totalSavings = month.savings.reduce((s, sv) => s + sv.amount, 0);
-  const remaining = totalIncome - totalExpenses - totalSavings;
-
-  await prisma.month.update({
-    where: { id: monthId },
-    data: { remainingBalance: remaining },
-  });
+  revalidateBudgetViews(monthId);
 }

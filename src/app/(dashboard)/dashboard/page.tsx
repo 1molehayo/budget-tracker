@@ -9,12 +9,14 @@ import { formatCurrency } from "@/utils/format";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const [months, projects] = await Promise.all([
     prisma.month.findMany({
       where: { userId: user!.id },
-      include: { incomes: true, expenses: true, savings: true },
+      include: { incomes: true, budgetLineItems: true, savings: true },
       orderBy: [{ year: "desc" }, { month: "desc" }],
       take: 12,
     }),
@@ -25,44 +27,39 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const publishedMonths = months.filter((m) => m.status === "PUBLISHED");
-
-  const totalIncome = publishedMonths.reduce(
-    (s, m) => s + m.incomes.reduce((si, i) => si + i.amount, 0), 0
+  const totalIncome = months.reduce(
+    (sum, month) => sum + month.incomes.reduce((itemSum, item) => itemSum + item.amount, 0),
+    0
   );
-  const totalExpenses = publishedMonths.reduce(
-    (s, m) => s + m.expenses.reduce((se, e) => se + e.amount, 0), 0
+  const totalBudgetLineItems = months.reduce(
+    (sum, month) => sum + month.budgetLineItems.reduce((itemSum, item) => itemSum + item.amount, 0),
+    0
   );
-  const totalSavings = publishedMonths.reduce(
-    (s, m) => s + m.savings.reduce((ss, sv) => ss + sv.amount, 0), 0
+  const totalSavings = months.reduce(
+    (sum, month) => sum + month.savings.reduce((itemSum, item) => itemSum + item.amount, 0),
+    0
   );
 
-  const avgIncome = publishedMonths.length > 0 ? totalIncome / publishedMonths.length : 0;
-  const avgExpenses = publishedMonths.length > 0 ? totalExpenses / publishedMonths.length : 0;
+  const avgIncome = months.length > 0 ? totalIncome / months.length : 0;
+  const avgBudgetItems = months.length > 0 ? totalBudgetLineItems / months.length : 0;
 
-  const recentMonths = months.slice(0, 6).map((m) => ({
-    ...m,
-    totalIncome: m.incomes.reduce((s, i) => s + i.amount, 0),
-    totalExpenses: m.expenses.reduce((s, e) => s + e.amount, 0),
-    totalSavings: m.savings.reduce((s, sv) => s + sv.amount, 0),
+  const recentMonths = months.slice(0, 6).map((month) => ({
+    ...month,
+    totalIncome: month.incomes.reduce((sum, item) => sum + item.amount, 0),
   }));
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Welcome */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
-          Good day! 👋
-        </h2>
-        <p className="text-gray-500 mt-1">Here&apos;s your financial overview.</p>
+        <h2 className="text-2xl font-bold text-gray-900">Good day</h2>
+        <p className="text-gray-500 mt-1">Here is your financial overview.</p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <SummaryCard
           title="Avg Monthly Income"
           value={formatCurrency(avgIncome)}
-          subtitle={`Across ${publishedMonths.length} months`}
+          subtitle={`Across ${months.length} months`}
           gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
           iconBg="bg-white/20"
           icon={
@@ -72,9 +69,9 @@ export default async function DashboardPage() {
           }
         />
         <SummaryCard
-          title="Avg Monthly Expenses"
-          value={formatCurrency(avgExpenses)}
-          subtitle={`${avgIncome > 0 ? Math.round((avgExpenses / avgIncome) * 100) : 0}% of income`}
+          title="Avg Budget Items"
+          value={formatCurrency(avgBudgetItems)}
+          subtitle={`${avgIncome > 0 ? Math.round((avgBudgetItems / avgIncome) * 100) : 0}% of income`}
           gradient="bg-gradient-to-br from-rose-500 to-pink-600"
           iconBg="bg-white/20"
           icon={
@@ -86,7 +83,7 @@ export default async function DashboardPage() {
         <SummaryCard
           title="Total Saved"
           value={formatCurrency(totalSavings)}
-          subtitle="All time savings"
+          subtitle="Across all months"
           gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
           iconBg="bg-white/20"
           icon={
@@ -97,7 +94,7 @@ export default async function DashboardPage() {
         />
         <SummaryCard
           title="Active Projects"
-          value={String(projects.filter((p) => p.status === "PLANNED").length)}
+          value={String(projects.filter((project) => project.status !== "COMPLETED").length)}
           subtitle={`${projects.length} total projects`}
           gradient="bg-gradient-to-br from-violet-500 to-purple-600"
           iconBg="bg-white/20"
@@ -109,7 +106,6 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Recent Months + Projects */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">
           <Card>
@@ -141,22 +137,20 @@ export default async function DashboardPage() {
               {projects.length === 0 ? (
                 <div className="text-center py-6 text-gray-400">
                   <p className="text-sm">No projects yet.</p>
-                  <Link href="/projects" className="text-sm text-violet-600 hover:underline mt-2 block">
-                    Create one →
-                  </Link>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {projects.map((project) => {
-                    const pct = project.targetAmount > 0
-                      ? Math.min(100, Math.round((project.savedAmount / project.targetAmount) * 100))
-                      : 0;
+                    const pct =
+                      project.targetAmount > 0
+                        ? Math.min(100, Math.round((project.savedAmount / project.targetAmount) * 100))
+                        : 0;
                     return (
                       <div key={project.id} className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-900">{project.title}</span>
                           <Badge variant={project.status === "COMPLETED" ? "success" : "info"}>
-                            {pct}%
+                            {project.status}
                           </Badge>
                         </div>
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">

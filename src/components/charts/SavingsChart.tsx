@@ -16,12 +16,6 @@ import {
 import type { ChartDataPoint } from "@/types";
 import { formatCurrency } from "@/utils/format";
 
-interface SavingsChartProps {
-  data: ChartDataPoint[];
-  ajoTotal: number;
-  otherTotal: number;
-}
-
 const PIE_COLORS = ["#7c3aed", "#14b8a6"];
 
 const CustomTooltip = ({ active, payload, label }: {

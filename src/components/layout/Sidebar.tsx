@@ -100,13 +100,13 @@ export function Sidebar() {
       {/* Bottom */}
       <div className="px-3 py-4 border-t border-violet-700/50">
         <Link
-          href="/months/new"
+          href="/months"
           className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-emerald-900/30"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          New Month
+          Manage Months
         </Link>
       </div>
     </aside>
