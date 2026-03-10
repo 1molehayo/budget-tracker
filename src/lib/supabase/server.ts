@@ -1,12 +1,33 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import {
+  getLocalAuthUser,
+  getSupabaseEnv,
+  isLocalAuthBypassEnabled,
+} from "@/lib/supabase/local";
 
 export async function createClient() {
+  if (isLocalAuthBypassEnabled()) {
+    const user = getLocalAuthUser();
+
+    return {
+      auth: {
+        async getUser() {
+          return {
+            data: { user },
+            error: null,
+          };
+        },
+      },
+    };
+  }
+
   const cookieStore = await cookies();
+  const { url, anonKey } = getSupabaseEnv();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {

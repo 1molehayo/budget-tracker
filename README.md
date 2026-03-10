@@ -48,6 +48,22 @@ npm install
 
 ```env
 DATABASE_URL="postgresql://user:password@localhost:5432/budget_tracker"
+```
+
+For the local MVP, Supabase is optional. If `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` are omitted in development, the app uses a
+built-in local auth bypass user instead of requiring a real Supabase project.
+
+Optional local-only overrides:
+
+```env
+LOCAL_DEV_USER_ID="local-dev-user"
+LOCAL_DEV_USER_EMAIL="local@example.com"
+```
+
+If you want real Supabase auth locally, also set:
+
+```env
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
@@ -65,6 +81,9 @@ npx prisma migrate dev --name refine_budget_domain
 npm run dev
 ```
 
+If you are using the local MVP path, the app will boot with the built-in local
+auth bypass as long as PostgreSQL is available and `DATABASE_URL` is valid.
+
 ## Prisma Domain Model
 
 - `Month`
@@ -80,3 +99,4 @@ npm run dev
 
 - OCR is intentionally not included yet.
 - CSV export includes monthly totals plus income, budget line item, and savings detail sections.
+- In non-production, missing Supabase browser env vars automatically enable the local auth bypass.

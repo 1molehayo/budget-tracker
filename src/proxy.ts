@@ -1,12 +1,38 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  getLocalAuthUser,
+  getSupabaseEnv,
+  isLocalAuthBypassEnabled,
+} from "@/lib/supabase/local";
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
+  const isPublicAsset = pathname.startsWith("/_next") || pathname.startsWith("/favicon");
+  const isPublicRoute = pathname === "/health";
+
+  if (isLocalAuthBypassEnabled()) {
+    if (isAuthPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    if (isPublicAsset || isPublicRoute) {
+      return NextResponse.next({ request });
+    }
+
+    getLocalAuthUser();
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
+  const { url, anonKey } = getSupabaseEnv();
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -29,11 +55,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
-  const isPublicAsset = pathname.startsWith("/_next") || pathname.startsWith("/favicon");
-
-  if (!user && !isAuthPage && !isPublicAsset) {
+  if (!user && !isAuthPage && !isPublicAsset && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
