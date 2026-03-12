@@ -226,8 +226,14 @@ export async function deleteBudgetLineItem(id: string, monthId: string) {
   revalidateBudgetViews(monthId);
 }
 
-export async function addSaving(monthId: string, formData: FormData) {
+export async function addSaving(formData: FormData) {
   const user = await getUser();
+  const monthId = ((formData.get("monthId") as string) || "").trim();
+
+  if (!monthId) {
+    throw new Error("Savings entries require a target month");
+  }
+
   await assertMonthOwnership(monthId, user.id);
   await ensureSystemTags(user.id);
 

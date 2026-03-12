@@ -1,4 +1,4 @@
-import type { Income, BudgetLineItem, Saving, MonthWithDetails } from "@/types";
+import type { Income, BudgetLineItem, Saving, MonthWithDetails, Project, ProjectStatus } from "@/types";
 import { getTagDisplayName } from "@/utils/tags";
 
 export function calculateTotalIncome(incomes: Income[]): number {
@@ -100,6 +100,94 @@ export function calculateProjectLinkedSavingsTotal(savings: Saving[]): number {
   return savings
     .filter(isProjectLinkedSaving)
     .reduce((sum, saving) => sum + saving.amount, 0);
+}
+
+export function calculateDerivedProjectFunding(savings: Saving[]): number {
+  return calculateProjectLinkedSavingsTotal(savings);
+}
+
+export function calculateProjectRemainingAmount(
+  targetAmount: number,
+  fundedAmount: number
+): number {
+  if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, targetAmount - fundedAmount);
+}
+
+export function calculateProjectProgressPercentage(
+  targetAmount: number,
+  fundedAmount: number
+): number {
+  if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, Math.round((fundedAmount / targetAmount) * 100)));
+}
+
+export function isProjectFundingTargetMet(targetAmount: number, fundedAmount: number): boolean {
+  return Number.isFinite(targetAmount) && targetAmount > 0 && fundedAmount >= targetAmount;
+}
+
+export function deriveProjectLifecycleStatus(
+  persistedStatus: ProjectStatus,
+  targetAmount: number,
+  fundedAmount: number
+): ProjectStatus {
+  if (persistedStatus === "PAUSED") {
+    return "PAUSED";
+  }
+
+  if (persistedStatus === "COMPLETED") {
+    return isProjectFundingTargetMet(targetAmount, fundedAmount)
+      ? "COMPLETED"
+      : fundedAmount > 0
+        ? "IN_PROGRESS"
+        : "PENDING";
+  }
+
+  if (isProjectFundingTargetMet(targetAmount, fundedAmount)) {
+    return "READY";
+  }
+
+  if (fundedAmount > 0) {
+    return "IN_PROGRESS";
+  }
+
+  return "PENDING";
+}
+
+export function summarizeProjectFunding(project: Pick<Project, "targetAmount" | "savings">) {
+  const fundedAmount = calculateDerivedProjectFunding(project.savings ?? []);
+  const remainingAmount = calculateProjectRemainingAmount(project.targetAmount, fundedAmount);
+  const progressPercentage = calculateProjectProgressPercentage(project.targetAmount, fundedAmount);
+
+  return {
+    fundedAmount,
+    remainingAmount,
+    progressPercentage,
+  };
+}
+
+export function summarizeProjectLifecycle(
+  project: Pick<Project, "status" | "targetAmount" | "savings">
+) {
+  const funding = summarizeProjectFunding(project);
+  const effectiveStatus = deriveProjectLifecycleStatus(
+    project.status,
+    project.targetAmount,
+    funding.fundedAmount
+  );
+  const canMarkCompleted = isProjectFundingTargetMet(project.targetAmount, funding.fundedAmount);
+
+  return {
+    ...funding,
+    effectiveStatus,
+    canMarkCompleted,
+  };
 }
 
 export function calculateGeneralSavingsTotal(savings: Saving[]): number {

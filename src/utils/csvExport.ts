@@ -18,6 +18,27 @@ function buildRow(cells: (string | number | undefined | null)[]): string {
 
 export function exportMonthsToCsv(months: MonthWithDetails[]): string {
   const rows: string[] = [];
+  const projectFundingMap = months.reduce<
+    Record<string, { projectTitle: string; fundedAmount: number }>
+  >((acc, month) => {
+    for (const saving of month.savings) {
+      if (saving.destinationType !== "PROJECT" || !saving.project?.id) {
+        continue;
+      }
+
+      const key = saving.project.id;
+      if (!acc[key]) {
+        acc[key] = {
+          projectTitle: saving.project.title,
+          fundedAmount: 0,
+        };
+      }
+
+      acc[key].fundedAmount += saving.amount;
+    }
+
+    return acc;
+  }, {});
 
   rows.push(
     buildRow([
@@ -108,6 +129,15 @@ export function exportMonthsToCsv(months: MonthWithDetails[]): string {
         ])
       );
     }
+  }
+
+  rows.push("");
+  rows.push(buildRow(["PROJECT FUNDING SUMMARY"]));
+  rows.push(buildRow(["Project", "Derived Funding From PROJECT Savings"]));
+  for (const projectFunding of Object.values(projectFundingMap).sort((a, b) =>
+    a.projectTitle.localeCompare(b.projectTitle)
+  )) {
+    rows.push(buildRow([projectFunding.projectTitle, projectFunding.fundedAmount]));
   }
 
   return rows.join("\n");

@@ -398,3 +398,135 @@ Implement the income-specific behavior and rule tightening on top of the Phase 3
 - Edit and delete flows were not re-verified in this phase
 - Lint still has the same unrelated warnings
 - Project funding remains transitional until later phases refactor it around project-linked savings
+
+## Phase 3F — Derived project funding truth
+
+### Request
+Refactor project funding so linked `PROJECT` savings become the only active funding truth:
+- remove active reliance on manual or legacy project funding
+- derive funded amount, remaining amount, and progress from linked `PROJECT` savings
+- update project displays and summaries accordingly
+- keep `legacySavedAmount` transitional and read-only only
+
+### Changes made
+- Added shared project-funding helpers in `src/utils/calculations.ts` for:
+  - derived funded amount
+  - derived remaining amount
+  - derived progress percentage
+  - summarized project funding
+- Updated the projects UI to use derived funding helpers everywhere active funding is shown
+- Updated project copy and labels so `legacySavedAmount` is clearly presented as historical manual carryover only
+- Added project-form helper text clarifying that active funding comes from project-linked savings entries
+- Updated dashboard project summaries to use derived project funding helpers and show remaining amount from the derived funding truth
+- Filtered project loaders so project funding reads are constrained to `destinationType = PROJECT`
+- Updated insights wording from `Project-linked Savings` to `Active Project Funding`
+- Added a `PROJECT FUNDING SUMMARY` section to CSV export derived from linked `PROJECT` savings
+- Simplified the savings form action to use `FormData` with hidden `monthId`, matching the stable income-path approach and avoiding bound-action transport issues during live verification
+- Updated STATUS.md to move the repo to the next active phase
+
+### Files touched
+- `src/utils/calculations.ts`
+- `src/app/(dashboard)/projects/ProjectsClient.tsx`
+- `src/app/(dashboard)/projects/page.tsx`
+- `src/app/(dashboard)/dashboard/page.tsx`
+- `src/app/(dashboard)/insights/page.tsx`
+- `src/utils/csvExport.ts`
+- `src/app/actions/months.ts`
+- `src/components/months/MonthDetailsClient.tsx`
+- `STATUS.md`
+- `PROGRESS.md`
+
+### Verification
+- `npx prisma validate`
+- `npx prisma migrate status --schema prisma/schema.prisma`
+- `npm run lint`
+- route checks for:
+  - `/dashboard`
+  - `/months`
+  - `/insights`
+  - `/projects`
+- live `PROJECT` saving submission against `/months/<id>`
+- `PGPASSWORD=budget_password psql -h localhost -p 55433 -U budget_user -d budget_tracker -c '<project funding verification queries>'`
+- rendered page checks on `/projects`, `/dashboard`, and `/insights`
+
+### Outcome
+- Active project funding is now derived only from linked `PROJECT` savings
+- Project remaining amount and progress percentage are derived from the linked funding total, not from `legacySavedAmount`
+- A live `PROJECT` saving increased the derived funding for `Emergency Fund` from `55` to `62`
+- The rendered project page, dashboard, and insights all reflected the derived funding total of `62` while legacy carryover remained `200` and read-only
+- The project page displayed `8%` progress for a target of `800`, confirming that progress is based on derived funding rather than the historical carryover
+
+### Remaining issues
+- Phase 3G has not started
+- Edit and delete flows were not re-verified in this phase
+- Lint still has the same unrelated warnings
+- `legacySavedAmount` still exists as historical carryover until a later cleanup phase removes it
+
+## Phase 3G — Project lifecycle status behavior
+
+### Request
+Implement project lifecycle behavior on top of the derived project funding model:
+- derive lifecycle state from active project funding where appropriate
+- keep only explicit manual overrides for `PAUSED` and gated `COMPLETED`
+- enforce lifecycle validation server-side
+- update project UI and summaries to reflect the lifecycle clearly
+
+### Changes made
+- Added shared lifecycle helpers in `src/utils/calculations.ts` for:
+  - funding-target checks
+  - effective lifecycle derivation
+  - lifecycle summary including completion eligibility
+- Updated `src/app/actions/projects.ts` so server-side project updates:
+  - reject invalid project targets
+  - only allow manual status submissions of `PAUSED`, `COMPLETED`, or `AUTO`
+  - reject `COMPLETED` unless derived funding meets the target
+  - derive `PENDING`, `IN_PROGRESS`, and `READY` from funding when `AUTO` is selected
+- Updated `src/app/(dashboard)/projects/ProjectsClient.tsx` so:
+  - project cards show effective lifecycle status, not just the stored enum
+  - lifecycle copy explains derived behavior
+  - the edit form exposes only the allowed lifecycle controls:
+    - `Use Derived Status (...)`
+    - `PAUSED`
+    - `COMPLETED` only when eligible
+  - new-project copy explains that projects start in `PENDING`
+- Updated `src/app/(dashboard)/dashboard/page.tsx` so project badges and active-project counts use effective lifecycle status
+- Updated STATUS.md to mark Phase 3 complete overall
+
+### Files touched
+- `src/utils/calculations.ts`
+- `src/app/actions/projects.ts`
+- `src/app/(dashboard)/projects/ProjectsClient.tsx`
+- `src/app/(dashboard)/dashboard/page.tsx`
+- `STATUS.md`
+- `PROGRESS.md`
+
+### Verification
+- `npx prisma validate`
+- `npx prisma migrate status --schema prisma/schema.prisma`
+- `npm run lint`
+- route checks for:
+  - `/dashboard`
+  - `/months`
+  - `/insights`
+  - `/projects`
+- inserted local lifecycle verification fixtures into Docker Postgres
+- rendered status extraction from `/projects`
+- direct Next server-action POST to `/projects` for incomplete `COMPLETED` rejection
+- direct Next server-action POST to `/projects` for READY-to-`COMPLETED` success
+- direct DB checks with `psql` for project status and linked funding totals
+
+### Outcome
+- New unfunded verification project rendered as `PENDING`
+- Existing funded-but-incomplete `Emergency Fund` rendered as `IN_PROGRESS`
+- Fully funded verification project rendered as `READY`
+- Incomplete completion attempt was rejected server-side with:
+  - `Projects can only be marked COMPLETED after funding reaches the target`
+- Fully funded verification project was successfully marked `COMPLETED`
+- A paused verification project kept rendering as `PAUSED` after its linked funding increased from `40` to `60`
+- Dashboard project summaries reflected the same effective lifecycle states as the project page
+
+### Remaining issues
+- Phase 3 is complete, but cleanup and broader regression testing remain
+- Edit and delete flows were not re-verified across every Phase 3 path
+- Lint still has the same unrelated warnings
+- The local lifecycle verification fixtures can be removed later if you want a cleaner demo dataset

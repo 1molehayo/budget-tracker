@@ -177,7 +177,7 @@ export default async function InsightsPage() {
                     </p>
                   </div>
                   <div className="bg-violet-50 rounded-xl p-3 flex items-center justify-between">
-                    <p className="text-xs text-violet-800">Project-linked Savings</p>
+                    <p className="text-xs text-violet-800">Active Project Funding</p>
                     <p className="text-sm font-bold text-violet-900">{formatCurrency(totalProjectLinkedSavings)}</p>
                   </div>
                   <div className="bg-amber-50 rounded-xl p-3 flex items-center justify-between">

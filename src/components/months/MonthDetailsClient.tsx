@@ -251,7 +251,8 @@ export function MonthDetailsClient({
         </CardHeader>
         <CardContent className="space-y-4">
           <SavingsTable savings={month.savings} showActions onDelete={handleDeleteSaving} />
-          <form action={addSaving.bind(null, month.id)} className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-2 border-t border-gray-100">
+          <form action={addSaving} className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-2 border-t border-gray-100">
+            <input type="hidden" name="monthId" value={month.id} />
             <Input name="label" placeholder="Label" required />
             <Input name="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
             <div className="flex flex-col gap-1">

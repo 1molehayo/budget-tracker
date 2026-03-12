@@ -7,10 +7,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency } from "@/utils/format";
 import {
-  calculateProjectLinkedSavingsTotal,
   calculateUsableGeneralSavingsPool,
   groupIncomeBySource,
-  summarizeSavings,
+  summarizeProjectLifecycle,
 } from "@/utils/calculations";
 
 function getStatusVariant(status: string) {
@@ -43,7 +42,7 @@ export default async function DashboardPage() {
     }),
     prisma.project.findMany({
       where: { userId: user!.id },
-      include: { savings: true },
+      include: { savings: { where: { destinationType: "PROJECT" } } },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
@@ -66,7 +65,8 @@ export default async function DashboardPage() {
     0
   );
   const totalProjectLinkedSavings = months.reduce(
-    (sum, month) => sum + calculateProjectLinkedSavingsTotal(month.savings),
+    (sum, month) =>
+      sum + month.savings.filter((saving) => saving.destinationType === "PROJECT").reduce((s, saving) => s + saving.amount, 0),
     0
   );
 
@@ -138,7 +138,9 @@ export default async function DashboardPage() {
         />
         <SummaryCard
           title="Active Projects"
-          value={String(projects.filter((project) => project.status !== "COMPLETED").length)}
+          value={String(
+            projects.filter((project) => summarizeProjectLifecycle(project).effectiveStatus !== "COMPLETED").length
+          )}
           subtitle={`${projects.length} total projects`}
           gradient="bg-gradient-to-br from-violet-500 to-purple-600"
           iconBg="bg-white/20"
@@ -185,38 +187,31 @@ export default async function DashboardPage() {
               ) : (
                 <div className="space-y-3">
                   {projects.map((project) => {
-                    const linkedSavings = calculateProjectLinkedSavingsTotal(project.savings ?? []);
-                    const projectSavingsSummary = summarizeSavings(project.savings ?? []);
-                    const pct =
-                      project.targetAmount > 0
-                        ? Math.min(100, Math.round((linkedSavings / project.targetAmount) * 100))
-                        : 0;
+                    const lifecycle = summarizeProjectLifecycle(project);
                     return (
                       <div key={project.id} className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-900">{project.title}</span>
-                          <Badge variant={getStatusVariant(project.status)}>
-                            {project.status}
+                          <Badge variant={getStatusVariant(lifecycle.effectiveStatus)}>
+                            {lifecycle.effectiveStatus}
                           </Badge>
                         </div>
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-violet-500 to-purple-600 rounded-full transition-all"
-                            style={{ width: `${pct}%` }}
+                            style={{ width: `${lifecycle.progressPercentage}%` }}
                           />
                         </div>
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>{formatCurrency(linkedSavings)}</span>
+                          <span>{formatCurrency(lifecycle.fundedAmount)}</span>
                           <span>{formatCurrency(project.targetAmount)}</span>
                         </div>
-                        {projectSavingsSummary.totalEntered > 0 && (
-                          <p className="text-xs text-gray-500">
-                            Project-linked total: {formatCurrency(projectSavingsSummary.projectLinkedTotal)}
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500">
+                          Remaining: {formatCurrency(lifecycle.remainingAmount)}
+                        </p>
                         {project.legacySavedAmount > 0 && (
                           <p className="text-xs text-amber-700">
-                            Legacy carryover: {formatCurrency(project.legacySavedAmount)}
+                            Historical manual carryover: {formatCurrency(project.legacySavedAmount)}
                           </p>
                         )}
                       </div>

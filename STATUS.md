@@ -1,7 +1,7 @@
 # STATUS.md
 
 ## Current Phase
-Phase 3E complete: income tagging rules and presentation are implemented on top of the Phase 3B/3C schema
+Phase 3 complete: month validation, schema refactor, tag wiring, savings rules, income rules, project funding truth, and project lifecycle behavior are all implemented
 
 ## What currently works
 - app boots locally
@@ -41,6 +41,19 @@ Phase 3E complete: income tagging rules and presentation are implemented on top 
   - `OTHER`
 - income tables and summaries show income source tags more clearly
 - insights include an income source breakdown
+- project funded amount derives from linked `PROJECT` savings only
+- project remaining amount derives from `targetAmount - linked PROJECT savings`
+- project progress percentage derives from linked `PROJECT` savings only
+- project and dashboard funding displays no longer use `legacySavedAmount` as active truth
+- adding a `PROJECT` saving updates the rendered project funded amount correctly
+- historical manual carryover is shown read-only only where relevant
+- new unfunded projects render as `PENDING`
+- funded but incomplete projects render as `IN_PROGRESS`
+- fully funded projects render as `READY` until manually completed
+- incomplete projects cannot be marked `COMPLETED` server-side
+- fully funded projects can be marked `COMPLETED`
+- `PAUSED` remains a manual lifecycle override even when funding changes
+- project lifecycle badges on `/projects` and `/dashboard` reflect derived funding state
 - dashboard, month details, and insights distinguish:
   - total savings entered
   - usable general pool
@@ -54,10 +67,11 @@ Phase 3E complete: income tagging rules and presentation are implemented on top 
 - `npx prisma migrate status` still fails inside the sandbox because localhost DB access is restricted there
 - delete and edit flows have not been re-verified in this phase
 - lint still has a few unrelated warnings
-- Phase 3F has not started yet:
-  - project funding is still transitional and not yet derived from project-linked savings as the only funding truth
-  - `legacySavedAmount` still exists as historical carryover only
-  - project status automation is not implemented
+- Post-Phase-3 cleanup and testing remain:
+  - `legacySavedAmount` still exists as historical carryover until a later cleanup phase removes it
+  - edit and delete paths should be re-verified across the full Phase 3 surface area
+  - the local verification fixtures added during Phase 3G can be cleaned up if you want a tidier demo dataset
+  - the same unrelated lint warnings still exist outside the budget domain work
 
 ## Immediate Goal
-Begin Phase 3F and refactor project funding to rely on linked savings instead of legacy manual carryover assumptions.
+Phase 3 is complete. The next sensible step is post-Phase-3 cleanup and broader regression testing rather than more domain refactoring.
