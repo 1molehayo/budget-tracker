@@ -13,7 +13,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import type { ChartDataPoint } from "@/types";
+import type { ChartBreakdownItem, ChartDataPoint } from "@/types";
 import { formatCurrency } from "@/utils/format";
 
 const PIE_COLORS = ["#7c3aed", "#14b8a6"];
@@ -57,11 +57,8 @@ export function SavingsAreaChart({ data }: { data: ChartDataPoint[] }) {
   );
 }
 
-export function SavingsPieChart({ ajoTotal, otherTotal }: { ajoTotal: number; otherTotal: number }) {
-  const pieData = [
-    { name: "AJO", value: ajoTotal },
-    { name: "Other", value: otherTotal },
-  ].filter((d) => d.value > 0);
+export function SavingsPieChart({ data }: { data: ChartBreakdownItem[] }) {
+  const pieData = data.filter((segment) => segment.value > 0);
 
   if (pieData.length === 0) {
     return <p className="text-center text-gray-400 text-sm py-8">No savings data yet.</p>;

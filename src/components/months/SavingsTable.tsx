@@ -1,6 +1,12 @@
 import type { Saving } from "@/types";
 import { formatCurrency } from "@/utils/format";
 import { Badge } from "@/components/ui/Badge";
+import { getTagDisplayName } from "@/utils/tags";
+import {
+  increasesUsableGeneralPool,
+  isExcludedFromUsableGeneralPool,
+  summarizeSavings,
+} from "@/utils/calculations";
 
 interface SavingsTableProps {
   savings: Saving[];
@@ -8,10 +14,36 @@ interface SavingsTableProps {
   onDelete?: (id: string) => void;
 }
 
+function getDestinationVariant(destinationType: Saving["destinationType"]) {
+  return destinationType === "PROJECT" ? "purple" : "teal";
+}
+
+function getDestinationLabel(saving: Saving) {
+  if (saving.destinationType === "PROJECT") {
+    return saving.project?.title || "Linked Project";
+  }
+
+  return getTagDisplayName(saving.tag);
+}
+
+function getPoolEffect(saving: Saving) {
+  if (saving.destinationType === "PROJECT") {
+    return "Project-linked only";
+  }
+
+  if (isExcludedFromUsableGeneralPool(saving)) {
+    return "Excluded from pool";
+  }
+
+  if (increasesUsableGeneralPool(saving)) {
+    return "Adds to usable pool";
+  }
+
+  return "No pool effect";
+}
+
 export function SavingsTable({ savings, showActions, onDelete }: SavingsTableProps) {
-  const total = savings.reduce((sum, s) => sum + s.amount, 0);
-  const ajoTotal = savings.filter((s) => s.category === "AJO").reduce((sum, s) => sum + s.amount, 0);
-  const otherTotal = savings.filter((s) => s.category === "OTHER").reduce((sum, s) => sum + s.amount, 0);
+  const summary = summarizeSavings(savings);
 
   if (savings.length === 0) {
     return <p className="text-sm text-gray-400 italic py-4 text-center">No savings entries yet.</p>;
@@ -23,7 +55,9 @@ export function SavingsTable({ savings, showActions, onDelete }: SavingsTablePro
         <thead>
           <tr className="border-b border-gray-100">
             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Label</th>
-            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Destination</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tag / Project</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Pool Effect</th>
             <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount</th>
             {showActions && <th className="w-12" />}
           </tr>
@@ -33,10 +67,12 @@ export function SavingsTable({ savings, showActions, onDelete }: SavingsTablePro
             <tr key={saving.id} className="hover:bg-gray-50/50">
               <td className="py-2.5 px-3 font-medium text-gray-900">{saving.label}</td>
               <td className="py-2.5 px-3">
-                <Badge variant={saving.category === "AJO" ? "purple" : "teal"}>
-                  {saving.category}
+                <Badge variant={getDestinationVariant(saving.destinationType)}>
+                  {saving.destinationType}
                 </Badge>
               </td>
+              <td className="py-2.5 px-3 text-gray-500">{getDestinationLabel(saving)}</td>
+              <td className="py-2.5 px-3 text-gray-500">{getPoolEffect(saving)}</td>
               <td className="py-2.5 px-3 text-right font-semibold text-blue-600">
                 {formatCurrency(saving.amount)}
               </td>
@@ -57,12 +93,14 @@ export function SavingsTable({ savings, showActions, onDelete }: SavingsTablePro
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-gray-100">
-            <td className="py-2.5 px-3 font-semibold text-gray-700" colSpan={2}>
+            <td className="py-2.5 px-3 font-semibold text-gray-700" colSpan={4}>
               <span className="mr-4">Total</span>
-              <span className="text-xs text-gray-400">AJO: {formatCurrency(ajoTotal)} | Other: {formatCurrency(otherTotal)}</span>
+              <span className="text-xs text-gray-400">
+                General entered: {formatCurrency(summary.generalTotal)} | Usable pool: {formatCurrency(summary.usableGeneralPool)} | Excluded AJO Contribution: {formatCurrency(summary.excludedGeneralTotal)} | Project-linked: {formatCurrency(summary.projectLinkedTotal)}
+              </span>
             </td>
             <td className="py-2.5 px-3 text-right font-bold text-blue-700 text-base">
-              {formatCurrency(total)}
+              {formatCurrency(summary.totalEntered)}
             </td>
             {showActions && <td />}
           </tr>

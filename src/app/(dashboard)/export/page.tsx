@@ -10,7 +10,11 @@ export default async function ExportPage() {
 
   const months = await prisma.month.findMany({
     where: { userId: user!.id },
-    include: { incomes: true, budgetLineItems: true, savings: true },
+    include: {
+      incomes: { include: { tag: true } },
+      budgetLineItems: true,
+      savings: { include: { tag: true, project: { select: { id: true, title: true, status: true } } } },
+    },
     orderBy: [{ year: "desc" }, { month: "desc" }],
   });
 

@@ -53,6 +53,7 @@ export default async function MonthsPage() {
   });
 
   const now = new Date();
+  const currentYear = now.getFullYear();
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -81,7 +82,15 @@ export default async function MonthsPage() {
                 ))}
               </select>
             </div>
-            <Input name="year" label="Year" type="number" defaultValue={String(now.getFullYear())} required />
+            <Input
+              name="year"
+              label="Year"
+              type="number"
+              defaultValue={String(currentYear)}
+              max={currentYear}
+              helperText="Only the current month or earlier can be created."
+              required
+            />
             <div className="self-end">
               <Button type="submit" className="w-full">Create</Button>
             </div>

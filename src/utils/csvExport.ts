@@ -1,6 +1,7 @@
 import type { MonthWithDetails } from "@/types";
 import { formatMonthYear } from "./format";
 import { calculateComputedRemainingBalance } from "./calculations";
+import { getTagDisplayName } from "@/utils/tags";
 
 function escapeCsv(value: string | number | undefined | null): string {
   if (value === null || value === undefined) return "";
@@ -17,6 +18,27 @@ function buildRow(cells: (string | number | undefined | null)[]): string {
 
 export function exportMonthsToCsv(months: MonthWithDetails[]): string {
   const rows: string[] = [];
+  const projectFundingMap = months.reduce<
+    Record<string, { projectTitle: string; fundedAmount: number }>
+  >((acc, month) => {
+    for (const saving of month.savings) {
+      if (saving.destinationType !== "PROJECT" || !saving.project?.id) {
+        continue;
+      }
+
+      const key = saving.project.id;
+      if (!acc[key]) {
+        acc[key] = {
+          projectTitle: saving.project.title,
+          fundedAmount: 0,
+        };
+      }
+
+      acc[key].fundedAmount += saving.amount;
+    }
+
+    return acc;
+  }, {});
 
   rows.push(
     buildRow([
@@ -61,10 +83,17 @@ export function exportMonthsToCsv(months: MonthWithDetails[]): string {
 
   rows.push("");
   rows.push(buildRow(["INCOME DETAILS"]));
-  rows.push(buildRow(["Period", "Label", "Amount"]));
+  rows.push(buildRow(["Period", "Label", "Income Source Tag", "Amount"]));
   for (const month of months) {
     for (const income of month.incomes) {
-      rows.push(buildRow([formatMonthYear(month.year, month.month), income.label, income.amount]));
+      rows.push(
+        buildRow([
+          formatMonthYear(month.year, month.month),
+          income.label,
+          getTagDisplayName(income.tag),
+          income.amount,
+        ])
+      );
     }
   }
 
@@ -86,18 +115,29 @@ export function exportMonthsToCsv(months: MonthWithDetails[]): string {
 
   rows.push("");
   rows.push(buildRow(["SAVINGS DETAILS"]));
-  rows.push(buildRow(["Period", "Label", "Category", "Amount"]));
+  rows.push(buildRow(["Period", "Label", "Destination", "Tag", "Project", "Amount"]));
   for (const month of months) {
     for (const saving of month.savings) {
       rows.push(
         buildRow([
           formatMonthYear(month.year, month.month),
           saving.label,
-          saving.category,
+          saving.destinationType,
+          saving.destinationType === "GENERAL" ? getTagDisplayName(saving.tag) : "",
+          saving.destinationType === "PROJECT" ? (saving.project?.title ?? "") : "",
           saving.amount,
         ])
       );
     }
+  }
+
+  rows.push("");
+  rows.push(buildRow(["PROJECT FUNDING SUMMARY"]));
+  rows.push(buildRow(["Project", "Derived Funding From PROJECT Savings"]));
+  for (const projectFunding of Object.values(projectFundingMap).sort((a, b) =>
+    a.projectTitle.localeCompare(b.projectTitle)
+  )) {
+    rows.push(buildRow([projectFunding.projectTitle, projectFunding.fundedAmount]));
   }
 
   return rows.join("\n");

@@ -1,23 +1,59 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Project } from "@/types";
+import type { Project, ProjectStatus } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency } from "@/utils/format";
+import { summarizeProjectLifecycle } from "@/utils/calculations";
 import { createProject, updateProject, deleteProject } from "@/app/actions/projects";
 
 interface ProjectsClientProps {
   projects: Project[];
 }
 
+function getStatusVariant(status: ProjectStatus) {
+  switch (status) {
+    case "COMPLETED":
+      return "success";
+    case "READY":
+      return "purple";
+    case "PAUSED":
+      return "warning";
+    case "IN_PROGRESS":
+      return "info";
+    default:
+      return "default";
+  }
+}
+
+function getLifecycleOptions(project: Project) {
+  const lifecycle = summarizeProjectLifecycle(project);
+  const options: Array<{ value: string; label: string }> = [
+    { value: "AUTO", label: `Use Derived Status (${lifecycle.effectiveStatus})` },
+    { value: "PAUSED", label: "PAUSED" },
+  ];
+
+  if (lifecycle.canMarkCompleted || project.status === "COMPLETED") {
+    options.push({ value: "COMPLETED", label: "COMPLETED" });
+  }
+
+  return options;
+}
+
 export default function ProjectsClient({ projects }: ProjectsClientProps) {
   const [isPending, startTransition] = useTransition();
   const [showCreate, setShowCreate] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const editingLifecycle = editingProject ? summarizeProjectLifecycle(editingProject) : null;
+  const editingLifecycleOptions = editingProject ? getLifecycleOptions(editingProject) : [];
+  const defaultLifecycleOption =
+    editingProject && (editingProject.status === "PAUSED" || editingProject.status === "COMPLETED")
+      ? editingProject.status
+      : "AUTO";
 
   function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -68,10 +104,7 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {projects.map((project) => {
-            const pct = project.targetAmount > 0
-              ? Math.min(100, Math.round((project.savedAmount / project.targetAmount) * 100))
-              : 0;
-            const remaining = project.targetAmount - project.savedAmount;
+            const lifecycle = summarizeProjectLifecycle(project);
 
             return (
               <Card key={project.id} className="relative overflow-hidden">
@@ -83,28 +116,30 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
                         <p className="text-xs text-gray-500 mt-0.5">{project.notes}</p>
                       )}
                     </div>
-                    <Badge variant={project.status === "COMPLETED" ? "success" : "info"}>
-                      {project.status}
+                    <Badge variant={getStatusVariant(lifecycle.effectiveStatus)}>
+                      {lifecycle.effectiveStatus}
                     </Badge>
                   </div>
 
                   <div className="mb-3">
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-gray-500">Progress</span>
-                      <span className="font-semibold text-gray-900">{pct}%</span>
+                      <span className="text-gray-500">Funding Progress</span>
+                      <span className="font-semibold text-gray-900">{lifecycle.progressPercentage}%</span>
                     </div>
                     <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all bg-gradient-to-r from-violet-500 to-purple-600"
-                        style={{ width: `${pct}%` }}
+                        style={{ width: `${lifecycle.progressPercentage}%` }}
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center mb-4">
+                  <div className="grid grid-cols-3 gap-2 text-center mb-3">
                     <div className="bg-gray-50 rounded-xl p-2">
-                      <p className="text-xs text-gray-500">Saved</p>
-                      <p className="text-sm font-bold text-violet-700">{formatCurrency(project.savedAmount)}</p>
+                      <p className="text-xs text-gray-500">Funded</p>
+                      <p className="text-sm font-bold text-violet-700">
+                        {formatCurrency(lifecycle.fundedAmount)}
+                      </p>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-2">
                       <p className="text-xs text-gray-500">Target</p>
@@ -112,11 +147,25 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
                     </div>
                     <div className="bg-gray-50 rounded-xl p-2">
                       <p className="text-xs text-gray-500">Left</p>
-                      <p className={`text-sm font-bold ${remaining > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                        {formatCurrency(Math.max(0, remaining))}
+                      <p
+                        className={`text-sm font-bold ${
+                          lifecycle.remainingAmount > 0 ? "text-amber-600" : "text-emerald-600"
+                        }`}
+                      >
+                        {formatCurrency(lifecycle.remainingAmount)}
                       </p>
                     </div>
                   </div>
+
+                  <p className="mb-3 text-xs text-gray-500">
+                    Lifecycle is derived from active project-linked funding unless the project is manually paused or completed.
+                  </p>
+
+                  {project.legacySavedAmount > 0 && (
+                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Historical manual carryover: {formatCurrency(project.legacySavedAmount)}. This is preserved for reference only and is not counted as active project funding.
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setEditingProject(project)} className="flex-1">
@@ -133,14 +182,21 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
         </div>
       )}
 
-      {/* Create Modal */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Project" size="md">
         <form action={handleCreate} className="space-y-4">
           <Input name="title" label="Project Title" placeholder="e.g. Emergency Fund" required />
-          <div className="grid grid-cols-2 gap-4">
-            <Input name="targetAmount" label="Target Amount" type="number" step="0.01" min="0" placeholder="5000" required />
-            <Input name="savedAmount" label="Already Saved" type="number" step="0.01" min="0" placeholder="0" />
-          </div>
+          <Input
+            name="targetAmount"
+            label="Target Amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="5000"
+            required
+          />
+          <p className="text-xs text-gray-500">
+            New projects start in PENDING and move through the lifecycle from project-linked savings activity.
+          </p>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Notes (optional)</label>
             <textarea
@@ -157,26 +213,49 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
         </form>
       </Modal>
 
-      {/* Edit Modal */}
-      {editingProject && (
+      {editingProject && editingLifecycle && (
         <Modal isOpen={!!editingProject} onClose={() => setEditingProject(null)} title="Edit Project" size="md">
           <form action={handleUpdate} className="space-y-4">
             <Input name="title" label="Project Title" defaultValue={editingProject.title} required />
-            <div className="grid grid-cols-2 gap-4">
-              <Input name="targetAmount" label="Target Amount" type="number" step="0.01" defaultValue={String(editingProject.targetAmount)} required />
-              <Input name="savedAmount" label="Saved Amount" type="number" step="0.01" defaultValue={String(editingProject.savedAmount)} />
-            </div>
+            <Input
+              name="targetAmount"
+              label="Target Amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              defaultValue={String(editingProject.targetAmount)}
+              required
+            />
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Status</label>
-              <select name="status" defaultValue={editingProject.status} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
-                <option value="PLANNED">PLANNED</option>
-                <option value="ONGOING">ONGOING</option>
-                <option value="COMPLETED">COMPLETED</option>
+              <label className="text-sm font-medium text-gray-700">Lifecycle State</label>
+              <select
+                name="status"
+                defaultValue={defaultLifecycleOption}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                {editingLifecycleOptions.map((statusOption) => (
+                  <option key={statusOption.value} value={statusOption.value}>
+                    {statusOption.label}
+                  </option>
+                ))}
               </select>
+              <p className="text-xs text-gray-500">
+                Current lifecycle: {editingLifecycle.effectiveStatus}. COMPLETED is only available once derived funding reaches the target.
+              </p>
             </div>
+            {editingProject.legacySavedAmount > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Historical manual carryover: {formatCurrency(editingProject.legacySavedAmount)}. This remains read-only during the migration transition and is not counted as active funding.
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Notes</label>
-              <textarea name="notes" rows={2} defaultValue={editingProject.notes ?? ""} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" />
+              <textarea
+                name="notes"
+                rows={2}
+                defaultValue={editingProject.notes ?? ""}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+              />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setEditingProject(null)}>Cancel</Button>
