@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import type { MonthWithDetails } from "@/types";
+import type { MonthWithDetails, ProjectSummary, SavingDestinationType, Tag } from "@/types";
 import { IncomeTable } from "@/components/months/IncomeTable";
 import { BudgetLineItemsTable } from "@/components/months/BudgetLineItemsTable";
 import { SavingsTable } from "@/components/months/SavingsTable";
@@ -10,6 +10,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { formatCurrency, formatMonthYear } from "@/utils/format";
+import { summarizeSavings } from "@/utils/calculations";
+import { getTagDisplayName } from "@/utils/tags";
 import {
   updateMonth,
   deleteMonth,
@@ -35,15 +37,30 @@ const BUDGET_ITEM_CATEGORIES = [
 
 interface MonthDetailsClientProps {
   month: MonthWithDetails;
+  incomeTags: Tag[];
+  savingsTags: Tag[];
+  projects: ProjectSummary[];
 }
 
-export function MonthDetailsClient({ month }: MonthDetailsClientProps) {
+export function MonthDetailsClient({
+  month,
+  incomeTags,
+  savingsTags,
+  projects,
+}: MonthDetailsClientProps) {
+  const defaultIncomeTagId = incomeTags.find((tag) => tag.code === "OTHER")?.id ?? incomeTags[0]?.id ?? "";
+  const defaultSavingsTagId = savingsTags.find((tag) => tag.code === "OTHER")?.id ?? savingsTags[0]?.id ?? "";
+  const defaultProjectId = projects[0]?.id ?? "";
   const [isPending, startTransition] = useTransition();
   const [overrideInput, setOverrideInput] = useState(
     month.remainingBalanceOverride === null || month.remainingBalanceOverride === undefined
       ? ""
       : String(month.remainingBalanceOverride)
   );
+  const [selectedIncomeTagId, setSelectedIncomeTagId] = useState(defaultIncomeTagId);
+  const [savingDestination, setSavingDestination] = useState<SavingDestinationType>("GENERAL");
+  const [selectedSavingsTagId, setSelectedSavingsTagId] = useState(defaultSavingsTagId);
+  const [selectedProjectId, setSelectedProjectId] = useState(defaultProjectId);
 
   const totalIncome = useMemo(
     () => month.incomes.reduce((sum, item) => sum + item.amount, 0),
@@ -53,10 +70,8 @@ export function MonthDetailsClient({ month }: MonthDetailsClientProps) {
     () => month.budgetLineItems.reduce((sum, item) => sum + item.amount, 0),
     [month.budgetLineItems]
   );
-  const totalSavings = useMemo(
-    () => month.savings.reduce((sum, item) => sum + item.amount, 0),
-    [month.savings]
-  );
+  const savingsSummary = useMemo(() => summarizeSavings(month.savings), [month.savings]);
+  const totalSavings = savingsSummary.totalEntered;
 
   const computedRemaining = totalIncome - totalBudgetLineItems - totalSavings;
   const finalRemaining =
@@ -75,6 +90,35 @@ export function MonthDetailsClient({ month }: MonthDetailsClientProps) {
   function handleDeleteSaving(id: string) {
     startTransition(() => deleteSaving(id, month.id));
   }
+
+  const selectedSavingsTag = savingsTags.find((tag) => tag.id === selectedSavingsTagId) ?? null;
+  const selectedIncomeTag = incomeTags.find((tag) => tag.id === selectedIncomeTagId) ?? null;
+  const canSubmitIncome = incomeTags.length > 0;
+  const canSubmitSaving = savingDestination === "GENERAL" ? savingsTags.length > 0 : projects.length > 0;
+  const incomeHelperText =
+    incomeTags.length === 0
+      ? "Income entries require an INCOME tag."
+      : selectedIncomeTag?.code === "SALARY"
+        ? "Use Salary for recurring pay from employment."
+        : selectedIncomeTag?.code === "GIG"
+          ? "Use Gig / Freelance for contract, side-job, or client work."
+          : selectedIncomeTag?.code === "GIFT"
+            ? "Use Gift for one-off money received from family or friends."
+            : selectedIncomeTag?.code === "AJO_PAYOUT"
+              ? "Use AJO Payout when the income source is an AJO payout."
+              : "Use OTHER when the source does not fit a more specific income tag.";
+  const savingsHelperText =
+    savingDestination === "GENERAL"
+      ? savingsTags.length === 0
+        ? "General savings require a SAVINGS tag."
+        : selectedSavingsTag?.code === "AJO_CONTRIBUTION"
+          ? "AJO Contribution is recorded in monthly savings entered, but it does not increase the usable general pool."
+          : selectedSavingsTag?.code === "AJO_PAYOUT"
+            ? "AJO Payout increases the usable general savings pool."
+            : "This entry increases the usable general savings pool."
+      : projects.length === 0
+        ? "Create a project before adding project-linked savings."
+        : "Project-linked savings fund the selected project only and do not increase the usable general pool.";
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -124,10 +168,43 @@ export function MonthDetailsClient({ month }: MonthDetailsClientProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <IncomeTable incomes={month.incomes} showActions onDelete={handleDeleteIncome} />
-          <form action={addIncome.bind(null, month.id)} className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-gray-100">
-            <Input name="label" placeholder="Source label" required />
+          <form action={addIncome} className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100">
+            <input type="hidden" name="monthId" value={month.id} />
+            <Input name="label" placeholder="Salary, freelance, gift..." required />
             <Input name="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
-            <Button type="submit" variant="secondary" size="sm" className="self-end">Add Income</Button>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600" htmlFor="income-tag-id">
+                Income Source Tag
+              </label>
+              <select
+                id="income-tag-id"
+                name="tagId"
+                value={selectedIncomeTagId}
+                onChange={(e) => setSelectedIncomeTagId(e.target.value)}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                required
+              >
+                {incomeTags.length === 0 ? (
+                  <option value="">No income tags available</option>
+                ) : (
+                  incomeTags.map((tag) => (
+                    <option key={tag.id} value={tag.id}>
+                      {getTagDisplayName(tag)}
+                    </option>
+                    ))
+                )}
+              </select>
+              <p className="text-xs text-gray-500">{incomeHelperText}</p>
+            </div>
+            <Button
+              type="submit"
+              variant="secondary"
+              size="sm"
+              className="self-end"
+              disabled={!canSubmitIncome}
+            >
+              Add Income
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -164,31 +241,96 @@ export function MonthDetailsClient({ month }: MonthDetailsClientProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Savings</CardTitle>
-            <span className="text-sm font-semibold text-blue-600">{formatCurrency(totalSavings)}</span>
+            <div className="text-right">
+              <span className="text-sm font-semibold text-blue-600">{formatCurrency(totalSavings)}</span>
+              <p className="text-xs text-gray-500">
+                Usable pool: {formatCurrency(savingsSummary.usableGeneralPool)}
+              </p>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <SavingsTable savings={month.savings} showActions onDelete={handleDeleteSaving} />
-          <form action={addSaving.bind(null, month.id)} className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100">
+          <form action={addSaving.bind(null, month.id)} className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-2 border-t border-gray-100">
             <Input name="label" placeholder="Label" required />
             <Input name="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
             <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600" htmlFor="saving-destination-type">
+                Destination
+              </label>
               <select
-                name="category"
+                id="saving-destination-type"
+                name="destinationType"
+                value={savingDestination}
+                onChange={(e) => setSavingDestination(e.target.value as SavingDestinationType)}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
-                <option value="OTHER">OTHER</option>
-                <option value="AJO">AJO</option>
+                <option value="GENERAL">General Pool</option>
+                <option value="PROJECT">Project Funding</option>
               </select>
             </div>
-            <Button type="submit" size="sm" className="self-end">Add Saving</Button>
+            {savingDestination === "GENERAL" ? (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600" htmlFor="saving-tag-id">
+                  Savings Tag
+                </label>
+                <select
+                  id="saving-tag-id"
+                  name="tagId"
+                  value={selectedSavingsTagId}
+                  onChange={(e) => setSelectedSavingsTagId(e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  required
+                >
+                  {savingsTags.length === 0 ? (
+                    <option value="">No savings tags available</option>
+                  ) : (
+                    savingsTags.map((tag) => (
+                      <option key={tag.id} value={tag.id}>
+                        {getTagDisplayName(tag)}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <input type="hidden" name="projectId" value="" />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600" htmlFor="saving-project-id">
+                  Project
+                </label>
+                <select
+                  id="saving-project-id"
+                  name="projectId"
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  required
+                >
+                  {projects.length === 0 ? (
+                    <option value="">No projects available</option>
+                  ) : (
+                    projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.title}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <input type="hidden" name="tagId" value="" />
+              </div>
+            )}
+            <div className="flex flex-col justify-end gap-1">
+              <Button type="submit" size="sm" disabled={!canSubmitSaving}>Add Saving</Button>
+              <p className="text-xs text-gray-500">{savingsHelperText}</p>
+            </div>
           </form>
         </CardContent>
       </Card>
 
       <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-5 border border-violet-100">
         <h3 className="font-semibold text-violet-900 mb-3">Balance Summary</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
           <div>
             <p className="text-gray-500">Income</p>
             <p className="font-bold text-emerald-600 text-lg">{formatCurrency(totalIncome)}</p>
@@ -198,8 +340,20 @@ export function MonthDetailsClient({ month }: MonthDetailsClientProps) {
             <p className="font-bold text-red-500 text-lg">{formatCurrency(totalBudgetLineItems)}</p>
           </div>
           <div>
-            <p className="text-gray-500">Savings</p>
+            <p className="text-gray-500">Savings Entered</p>
             <p className="font-bold text-blue-600 text-lg">{formatCurrency(totalSavings)}</p>
+          </div>
+          <div>
+            <p className="text-gray-500">Usable Pool</p>
+            <p className="font-bold text-teal-700 text-lg">
+              {formatCurrency(savingsSummary.usableGeneralPool)}
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-500">Project-linked</p>
+            <p className="font-bold text-violet-700 text-lg">
+              {formatCurrency(savingsSummary.projectLinkedTotal)}
+            </p>
           </div>
           <div>
             <p className="text-gray-500">Remaining</p>
@@ -208,6 +362,11 @@ export function MonthDetailsClient({ month }: MonthDetailsClientProps) {
             </p>
           </div>
         </div>
+        {savingsSummary.excludedGeneralTotal > 0 && (
+          <p className="mt-3 text-xs text-amber-700">
+            AJO Contribution excluded from usable pool: {formatCurrency(savingsSummary.excludedGeneralTotal)}
+          </p>
+        )}
       </div>
     </div>
   );

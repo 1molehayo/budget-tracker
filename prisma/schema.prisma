@@ -6,14 +6,21 @@ datasource db {
   provider = "postgresql"
 }
 
-enum SavingCategory {
-  AJO
-  OTHER
+enum TagCategory {
+  INCOME
+  SAVINGS
+}
+
+enum SavingDestinationType {
+  GENERAL
+  PROJECT
 }
 
 enum ProjectStatus {
-  PLANNED
-  ONGOING
+  PENDING
+  IN_PROGRESS
+  PAUSED
+  READY
   COMPLETED
 }
 
@@ -35,13 +42,34 @@ model Month {
   @@unique([userId, year, month])
 }
 
+model Tag {
+  id          String      @id @default(cuid())
+  userId      String
+  code        String
+  label       String?
+  category    TagCategory
+  isSystemTag Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  incomes     Income[]
+  savings     Saving[]
+
+  @@index([userId, category])
+  @@unique([userId, code, category])
+}
+
 model Income {
-  id      String @id @default(cuid())
+  id      String  @id @default(cuid())
   monthId String
   label   String
   amount  Float
+  tagId   String?
 
   month Month @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  tag   Tag?  @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@index([tagId])
 }
 
 model BudgetLineItem {
@@ -55,25 +83,38 @@ model BudgetLineItem {
 }
 
 model Saving {
-  id       String         @id @default(cuid())
-  monthId  String
-  label    String
-  amount   Float
-  category SavingCategory @default(OTHER)
+  id              String                @id @default(cuid())
+  monthId          String
+  label            String
+  amount           Float
+  destinationType  SavingDestinationType
+  tagId            String?
+  projectId        String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
-  month Month @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  month   Month    @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  tag     Tag?     @relation(fields: [tagId], references: [id], onDelete: Restrict)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+
+  @@index([monthId])
+  @@index([tagId])
+  @@index([projectId])
+  @@index([destinationType])
 }
 
 model Project {
-  id           String        @id @default(cuid())
-  userId       String
-  title        String
-  targetAmount Float
-  savedAmount  Float         @default(0)
-  status       ProjectStatus @default(PLANNED)
-  notes        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  userId            String
+  title             String
+  targetAmount      Float
+  legacySavedAmount Float         @default(0) @map("savedAmount")
+  status            ProjectStatus @default(PENDING)
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  savings Saving[]
 
   @@index([userId])
 }

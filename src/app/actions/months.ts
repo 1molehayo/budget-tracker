@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { TagCategory } from "@/types";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { ensureSystemTags } from "@/lib/tags";
 
 async function getUser() {
   const supabase = await createClient();
@@ -29,14 +31,45 @@ async function assertMonthOwnership(monthId: string, userId: string) {
   }
 }
 
+async function assertProjectOwnership(projectId: string, userId: string) {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, userId },
+    select: { id: true },
+  });
+
+  if (!project) {
+    throw new Error("Project not found");
+  }
+}
+
+async function assertTagOwnership(tagId: string, userId: string, category: TagCategory) {
+  const tag = await prisma.tag.findFirst({
+    where: { id: tagId, userId, category },
+    select: { id: true },
+  });
+
+  if (!tag) {
+    throw new Error("Tag not found");
+  }
+}
+
 function revalidateBudgetViews(monthId?: string) {
   revalidatePath("/dashboard");
   revalidatePath("/months");
   revalidatePath("/insights");
   revalidatePath("/export");
+  revalidatePath("/projects");
   if (monthId) {
     revalidatePath(`/months/${monthId}`);
   }
+}
+
+function isFutureMonth(year: number, month: number) {
+  const now = new Date();
+  const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
+  const selectedMonthIndex = year * 12 + (month - 1);
+
+  return selectedMonthIndex > currentMonthIndex;
 }
 
 export async function createMonth(formData: FormData) {
@@ -48,6 +81,10 @@ export async function createMonth(formData: FormData) {
 
   if (!label || !Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
     throw new Error("Invalid month data");
+  }
+
+  if (isFutureMonth(year, month)) {
+    throw new Error("Months can only be created for the current month or earlier");
   }
 
   const newMonth = await prisma.month.create({
@@ -101,15 +138,40 @@ export async function deleteMonth(id: string) {
   redirect("/months");
 }
 
-export async function addIncome(monthId: string, formData: FormData) {
+export async function addIncome(formData: FormData) {
   const user = await getUser();
+  const monthId = ((formData.get("monthId") as string) || "").trim();
+
+  if (!monthId) {
+    throw new Error("Income entries require a target month");
+  }
+
   await assertMonthOwnership(monthId, user.id);
+  await ensureSystemTags(user.id);
 
   const label = (formData.get("label") as string)?.trim();
   const amount = Number(formData.get("amount"));
+  const tagId = ((formData.get("tagId") as string) || "").trim();
 
-  if (!label || Number.isNaN(amount)) {
+  if (!label || Number.isNaN(amount) || amount < 0) {
     throw new Error("Invalid income data");
+  }
+
+  if (!tagId) {
+    throw new Error("Income entries require an INCOME tag");
+  }
+
+  const incomeTag = await prisma.tag.findFirst({
+    where: { id: tagId, userId: user.id },
+    select: { id: true, category: true },
+  });
+
+  if (!incomeTag) {
+    throw new Error("Income tag not found");
+  }
+
+  if (incomeTag.category !== "INCOME") {
+    throw new Error("Income entries require an INCOME tag");
   }
 
   await prisma.income.create({
@@ -117,6 +179,7 @@ export async function addIncome(monthId: string, formData: FormData) {
       monthId,
       label,
       amount,
+      tagId,
     },
   });
 
@@ -166,23 +229,55 @@ export async function deleteBudgetLineItem(id: string, monthId: string) {
 export async function addSaving(monthId: string, formData: FormData) {
   const user = await getUser();
   await assertMonthOwnership(monthId, user.id);
+  await ensureSystemTags(user.id);
 
   const label = (formData.get("label") as string)?.trim();
   const amount = Number(formData.get("amount"));
-  const category = (formData.get("category") as string) === "AJO" ? "AJO" : "OTHER";
+  const destinationType = formData.get("destinationType") as string;
+  const tagId = ((formData.get("tagId") as string) || "").trim() || null;
+  const projectId = ((formData.get("projectId") as string) || "").trim() || null;
 
-  if (!label || Number.isNaN(amount)) {
+  if (!label || Number.isNaN(amount) || amount < 0) {
     throw new Error("Invalid saving data");
   }
 
-  await prisma.saving.create({
-    data: {
-      monthId,
-      label,
-      amount,
-      category,
-    },
-  });
+  if (destinationType === "GENERAL") {
+    if (!tagId || projectId) {
+      throw new Error("General savings require a savings tag and cannot target a project");
+    }
+
+    await assertTagOwnership(tagId, user.id, "SAVINGS");
+
+    await prisma.saving.create({
+      data: {
+        monthId,
+        label,
+        amount,
+        destinationType: "GENERAL",
+        tagId,
+        projectId: null,
+      },
+    });
+  } else if (destinationType === "PROJECT") {
+    if (!projectId || tagId) {
+      throw new Error("Project-linked savings require a project and cannot use a tag");
+    }
+
+    await assertProjectOwnership(projectId, user.id);
+
+    await prisma.saving.create({
+      data: {
+        monthId,
+        label,
+        amount,
+        destinationType: "PROJECT",
+        tagId: null,
+        projectId,
+      },
+    });
+  } else {
+    throw new Error("Invalid saving destination");
+  }
 
   revalidateBudgetViews(monthId);
 }

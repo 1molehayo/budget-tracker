@@ -4,7 +4,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { formatCurrency, formatShortMonth } from "@/utils/format";
 import { IncomeBudgetItemsChart } from "@/components/charts/IncomeBudgetItemsChart";
 import { SavingsAreaChart, SavingsPieChart } from "@/components/charts/SavingsChart";
-import type { ChartDataPoint } from "@/types";
+import type { ChartBreakdownItem, ChartDataPoint } from "@/types";
+import {
+  calculateProjectLinkedSavingsTotal,
+  calculateUsableGeneralSavingsPool,
+  groupIncomeBySource,
+  groupSavingsByCategory,
+  summarizeSavings,
+} from "@/utils/calculations";
 
 export default async function InsightsPage() {
   const supabase = await createClient();
@@ -14,7 +21,11 @@ export default async function InsightsPage() {
 
   const months = await prisma.month.findMany({
     where: { userId: user!.id },
-    include: { incomes: true, budgetLineItems: true, savings: true },
+    include: {
+      incomes: { include: { tag: true } },
+      budgetLineItems: true,
+      savings: { include: { tag: true, project: { select: { id: true, title: true, status: true } } } },
+    },
     orderBy: [{ year: "asc" }, { month: "asc" }],
     take: 12,
   });
@@ -35,30 +46,48 @@ export default async function InsightsPage() {
     };
   });
 
-  const ajoTotal = months.reduce(
-    (sum, month) =>
-      sum +
-      month.savings
-        .filter((saving) => saving.category === "AJO")
-        .reduce((innerSum, saving) => innerSum + saving.amount, 0),
-    0
-  );
-
-  const otherSavingsTotal = months.reduce(
-    (sum, month) =>
-      sum +
-      month.savings
-        .filter((saving) => saving.category === "OTHER")
-        .reduce((innerSum, saving) => innerSum + saving.amount, 0),
-    0
-  );
+  const savingsBreakdownMap = months.reduce<Record<string, number>>((acc, month) => {
+    const monthGroups = groupSavingsByCategory(month.savings);
+    for (const [key, value] of Object.entries(monthGroups)) {
+      acc[key] = (acc[key] || 0) + value;
+    }
+    return acc;
+  }, {});
+  const savingsBreakdown: ChartBreakdownItem[] = Object.entries(savingsBreakdownMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+  const incomeSourceMap = months.reduce<Record<string, number>>((acc, month) => {
+    const monthGroups = groupIncomeBySource(month.incomes);
+    for (const [key, value] of Object.entries(monthGroups)) {
+      acc[key] = (acc[key] || 0) + value;
+    }
+    return acc;
+  }, {});
+  const incomeBreakdown: ChartBreakdownItem[] = Object.entries(incomeSourceMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
 
   const avgIncome = chartData.length > 0 ? chartData.reduce((sum, item) => sum + item.income, 0) / chartData.length : 0;
   const avgBudgetItems =
     chartData.length > 0 ? chartData.reduce((sum, item) => sum + item.budgetItems, 0) / chartData.length : 0;
-  const avgSavings = chartData.length > 0 ? chartData.reduce((sum, item) => sum + item.savings, 0) / chartData.length : 0;
-
-  const savingsRateAvg = avgIncome > 0 ? (avgSavings / avgIncome) * 100 : 0;
+  const avgSavingsEntered =
+    chartData.length > 0 ? chartData.reduce((sum, item) => sum + item.savings, 0) / chartData.length : 0;
+  const avgUsableGeneralPool =
+    months.length > 0
+      ? months.reduce((sum, month) => sum + calculateUsableGeneralSavingsPool(month.savings), 0) / months.length
+      : 0;
+  const totalProjectLinkedSavings = months.reduce(
+    (sum, month) => sum + calculateProjectLinkedSavingsTotal(month.savings),
+    0
+  );
+  const totalUsableGeneralPool = months.reduce(
+    (sum, month) => sum + calculateUsableGeneralSavingsPool(month.savings),
+    0
+  );
+  const excludedAjoContribution = months.reduce(
+    (sum, month) => sum + summarizeSavings(month.savings).excludedGeneralTotal,
+    0
+  );
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -71,12 +100,17 @@ export default async function InsightsPage() {
         {[
           { label: "Avg Income", value: formatCurrency(avgIncome), color: "text-emerald-600", bg: "bg-emerald-50" },
           { label: "Avg Budget Items", value: formatCurrency(avgBudgetItems), color: "text-red-500", bg: "bg-red-50" },
-          { label: "Avg Savings", value: formatCurrency(avgSavings), color: "text-blue-600", bg: "bg-blue-50" },
           {
-            label: "Avg Savings Rate",
-            value: `${(isNaN(savingsRateAvg) ? 0 : savingsRateAvg).toFixed(1)}%`,
-            color: "text-violet-700",
-            bg: "bg-violet-50",
+            label: "Avg Savings Entered",
+            value: formatCurrency(avgSavingsEntered),
+            color: "text-blue-600",
+            bg: "bg-blue-50",
+          },
+          {
+            label: "Avg Usable Pool",
+            value: formatCurrency(avgUsableGeneralPool),
+            color: "text-teal-700",
+            bg: "bg-teal-50",
           },
         ].map((kpi) => (
           <div key={kpi.label} className={`${kpi.bg} rounded-2xl p-4`}>
@@ -95,33 +129,73 @@ export default async function InsightsPage() {
       ) : (
         <>
           <Card>
-            <CardHeader><CardTitle>Income vs Budget Items vs Savings</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Income vs Budget Items vs Savings Entered</CardTitle></CardHeader>
             <CardContent>
               <IncomeBudgetItemsChart data={chartData} />
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader><CardTitle>Income Sources</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {incomeBreakdown.length === 0 ? (
+                  <div className="bg-gray-50 rounded-xl p-3 text-center sm:col-span-2 lg:col-span-4">
+                    <p className="text-xs text-gray-500">No income source tags recorded yet</p>
+                  </div>
+                ) : (
+                  incomeBreakdown.slice(0, 4).map((segment) => (
+                    <div key={segment.name} className="bg-emerald-50 rounded-xl p-3">
+                      <p className="text-xs text-emerald-700">{segment.name}</p>
+                      <p className="text-lg font-bold text-emerald-900 mt-1">
+                        {formatCurrency(segment.value)}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
-              <CardHeader><CardTitle>Savings Over Time</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Savings Entered Over Time</CardTitle></CardHeader>
               <CardContent>
                 <SavingsAreaChart data={chartData} />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader><CardTitle>Savings by Category</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Savings Breakdown</CardTitle></CardHeader>
               <CardContent>
-                <SavingsPieChart ajoTotal={ajoTotal} otherTotal={otherSavingsTotal} />
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div className="bg-violet-50 rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-500">AJO Total</p>
-                    <p className="text-lg font-bold text-violet-700">{formatCurrency(ajoTotal)}</p>
+                <SavingsPieChart data={savingsBreakdown} />
+                <div className="grid grid-cols-1 gap-3 mt-3">
+                  <div className="bg-teal-50 rounded-xl p-3 flex items-center justify-between">
+                    <p className="text-xs text-teal-800">Usable General Pool</p>
+                    <p className="text-sm font-bold text-teal-900">
+                      {formatCurrency(totalUsableGeneralPool)}
+                    </p>
                   </div>
-                  <div className="bg-teal-50 rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-500">Other Total</p>
-                    <p className="text-lg font-bold text-teal-700">{formatCurrency(otherSavingsTotal)}</p>
+                  <div className="bg-violet-50 rounded-xl p-3 flex items-center justify-between">
+                    <p className="text-xs text-violet-800">Project-linked Savings</p>
+                    <p className="text-sm font-bold text-violet-900">{formatCurrency(totalProjectLinkedSavings)}</p>
                   </div>
+                  <div className="bg-amber-50 rounded-xl p-3 flex items-center justify-between">
+                    <p className="text-xs text-amber-800">Excluded AJO Contribution</p>
+                    <p className="text-sm font-bold text-amber-900">{formatCurrency(excludedAjoContribution)}</p>
+                  </div>
+                  {savingsBreakdown.length === 0 ? (
+                    <div className="bg-gray-50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500">No savings breakdown yet</p>
+                    </div>
+                  ) : (
+                    savingsBreakdown.slice(0, 4).map((segment) => (
+                      <div key={segment.name} className="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
+                        <p className="text-xs text-gray-500">{segment.name}</p>
+                        <p className="text-sm font-bold text-gray-900">{formatCurrency(segment.value)}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

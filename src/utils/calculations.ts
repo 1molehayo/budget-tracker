@@ -1,4 +1,5 @@
 import type { Income, BudgetLineItem, Saving, MonthWithDetails } from "@/types";
+import { getTagDisplayName } from "@/utils/tags";
 
 export function calculateTotalIncome(incomes: Income[]): number {
   return incomes.reduce((sum, item) => sum + item.amount, 0);
@@ -10,6 +11,22 @@ export function calculateTotalBudgetLineItems(lineItems: BudgetLineItem[]): numb
 
 export function calculateTotalSavings(savings: Saving[]): number {
   return savings.reduce((sum, item) => sum + item.amount, 0);
+}
+
+export function isGeneralSaving(saving: Saving): boolean {
+  return saving.destinationType === "GENERAL";
+}
+
+export function isProjectLinkedSaving(saving: Saving): boolean {
+  return saving.destinationType === "PROJECT";
+}
+
+export function isExcludedFromUsableGeneralPool(saving: Saving): boolean {
+  return isGeneralSaving(saving) && saving.tag?.code === "AJO_CONTRIBUTION";
+}
+
+export function increasesUsableGeneralPool(saving: Saving): boolean {
+  return isGeneralSaving(saving) && !isExcludedFromUsableGeneralPool(saving);
 }
 
 export function calculateComputedRemainingBalance(
@@ -60,9 +77,61 @@ export function groupBudgetLineItemsByCategory(lineItems: BudgetLineItem[]): Rec
   }, {});
 }
 
-export function groupSavingsByCategory(savings: Saving[]): Record<string, number> {
-  return savings.reduce<Record<string, number>>((acc, saving) => {
-    acc[saving.category] = (acc[saving.category] || 0) + saving.amount;
+export function groupIncomeBySource(incomes: Income[]): Record<string, number> {
+  return incomes.reduce<Record<string, number>>((acc, income) => {
+    const key = getTagDisplayName(income.tag);
+    acc[key] = (acc[key] || 0) + income.amount;
     return acc;
   }, {});
+}
+
+export function groupSavingsByCategory(savings: Saving[]): Record<string, number> {
+  return savings.reduce<Record<string, number>>((acc, saving) => {
+    const key =
+      isProjectLinkedSaving(saving)
+        ? saving.project?.title || "Project-linked"
+        : saving.tag?.label || saving.tag?.code || "Untagged";
+    acc[key] = (acc[key] || 0) + saving.amount;
+    return acc;
+  }, {});
+}
+
+export function calculateProjectLinkedSavingsTotal(savings: Saving[]): number {
+  return savings
+    .filter(isProjectLinkedSaving)
+    .reduce((sum, saving) => sum + saving.amount, 0);
+}
+
+export function calculateGeneralSavingsTotal(savings: Saving[]): number {
+  return savings
+    .filter(isGeneralSaving)
+    .reduce((sum, saving) => sum + saving.amount, 0);
+}
+
+export function calculateUsableGeneralSavingsPool(savings: Saving[]): number {
+  return savings
+    .filter(increasesUsableGeneralPool)
+    .reduce((sum, saving) => sum + saving.amount, 0);
+}
+
+export function calculateExcludedGeneralSavingsTotal(savings: Saving[]): number {
+  return savings
+    .filter(isExcludedFromUsableGeneralPool)
+    .reduce((sum, saving) => sum + saving.amount, 0);
+}
+
+export function summarizeSavings(savings: Saving[]) {
+  const totalEntered = calculateTotalSavings(savings);
+  const generalTotal = calculateGeneralSavingsTotal(savings);
+  const usableGeneralPool = calculateUsableGeneralSavingsPool(savings);
+  const excludedGeneralTotal = calculateExcludedGeneralSavingsTotal(savings);
+  const projectLinkedTotal = calculateProjectLinkedSavingsTotal(savings);
+
+  return {
+    totalEntered,
+    generalTotal,
+    usableGeneralPool,
+    excludedGeneralTotal,
+    projectLinkedTotal,
+  };
 }

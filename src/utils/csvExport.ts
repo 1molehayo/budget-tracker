@@ -1,6 +1,7 @@
 import type { MonthWithDetails } from "@/types";
 import { formatMonthYear } from "./format";
 import { calculateComputedRemainingBalance } from "./calculations";
+import { getTagDisplayName } from "@/utils/tags";
 
 function escapeCsv(value: string | number | undefined | null): string {
   if (value === null || value === undefined) return "";
@@ -61,10 +62,17 @@ export function exportMonthsToCsv(months: MonthWithDetails[]): string {
 
   rows.push("");
   rows.push(buildRow(["INCOME DETAILS"]));
-  rows.push(buildRow(["Period", "Label", "Amount"]));
+  rows.push(buildRow(["Period", "Label", "Income Source Tag", "Amount"]));
   for (const month of months) {
     for (const income of month.incomes) {
-      rows.push(buildRow([formatMonthYear(month.year, month.month), income.label, income.amount]));
+      rows.push(
+        buildRow([
+          formatMonthYear(month.year, month.month),
+          income.label,
+          getTagDisplayName(income.tag),
+          income.amount,
+        ])
+      );
     }
   }
 
@@ -86,14 +94,16 @@ export function exportMonthsToCsv(months: MonthWithDetails[]): string {
 
   rows.push("");
   rows.push(buildRow(["SAVINGS DETAILS"]));
-  rows.push(buildRow(["Period", "Label", "Category", "Amount"]));
+  rows.push(buildRow(["Period", "Label", "Destination", "Tag", "Project", "Amount"]));
   for (const month of months) {
     for (const saving of month.savings) {
       rows.push(
         buildRow([
           formatMonthYear(month.year, month.month),
           saving.label,
-          saving.category,
+          saving.destinationType,
+          saving.destinationType === "GENERAL" ? getTagDisplayName(saving.tag) : "",
+          saving.destinationType === "PROJECT" ? (saving.project?.title ?? "") : "",
           saving.amount,
         ])
       );

@@ -8,6 +8,7 @@ export default async function ProjectsPage() {
 
   const projects = await prisma.project.findMany({
     where: { userId: user!.id },
+    include: { savings: true },
     orderBy: { createdAt: "desc" },
   });
 

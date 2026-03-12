@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Project } from "@/types";
+import type { Project, ProjectStatus } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -12,6 +12,27 @@ import { createProject, updateProject, deleteProject } from "@/app/actions/proje
 
 interface ProjectsClientProps {
   projects: Project[];
+}
+
+const PROJECT_STATUSES: ProjectStatus[] = ["PENDING", "IN_PROGRESS", "PAUSED", "READY", "COMPLETED"];
+
+function getStatusVariant(status: ProjectStatus) {
+  switch (status) {
+    case "COMPLETED":
+      return "success";
+    case "READY":
+      return "purple";
+    case "PAUSED":
+      return "warning";
+    case "IN_PROGRESS":
+      return "info";
+    default:
+      return "default";
+  }
+}
+
+function getActiveFunding(project: Project) {
+  return project.savings?.reduce((sum, saving) => sum + saving.amount, 0) ?? 0;
 }
 
 export default function ProjectsClient({ projects }: ProjectsClientProps) {
@@ -68,10 +89,11 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {projects.map((project) => {
+            const linkedSavings = getActiveFunding(project);
             const pct = project.targetAmount > 0
-              ? Math.min(100, Math.round((project.savedAmount / project.targetAmount) * 100))
+              ? Math.min(100, Math.round((linkedSavings / project.targetAmount) * 100))
               : 0;
-            const remaining = project.targetAmount - project.savedAmount;
+            const remaining = project.targetAmount - linkedSavings;
 
             return (
               <Card key={project.id} className="relative overflow-hidden">
@@ -83,7 +105,7 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
                         <p className="text-xs text-gray-500 mt-0.5">{project.notes}</p>
                       )}
                     </div>
-                    <Badge variant={project.status === "COMPLETED" ? "success" : "info"}>
+                    <Badge variant={getStatusVariant(project.status)}>
                       {project.status}
                     </Badge>
                   </div>
@@ -101,10 +123,10 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center mb-4">
+                  <div className="grid grid-cols-3 gap-2 text-center mb-3">
                     <div className="bg-gray-50 rounded-xl p-2">
-                      <p className="text-xs text-gray-500">Saved</p>
-                      <p className="text-sm font-bold text-violet-700">{formatCurrency(project.savedAmount)}</p>
+                      <p className="text-xs text-gray-500">Linked Savings</p>
+                      <p className="text-sm font-bold text-violet-700">{formatCurrency(linkedSavings)}</p>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-2">
                       <p className="text-xs text-gray-500">Target</p>
@@ -117,6 +139,12 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
                       </p>
                     </div>
                   </div>
+
+                  {project.legacySavedAmount > 0 && (
+                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Legacy carryover: {formatCurrency(project.legacySavedAmount)}. This is preserved for reference only and is not counted as active linked funding.
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setEditingProject(project)} className="flex-1">
@@ -133,14 +161,10 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
         </div>
       )}
 
-      {/* Create Modal */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Project" size="md">
         <form action={handleCreate} className="space-y-4">
           <Input name="title" label="Project Title" placeholder="e.g. Emergency Fund" required />
-          <div className="grid grid-cols-2 gap-4">
-            <Input name="targetAmount" label="Target Amount" type="number" step="0.01" min="0" placeholder="5000" required />
-            <Input name="savedAmount" label="Already Saved" type="number" step="0.01" min="0" placeholder="0" />
-          </div>
+          <Input name="targetAmount" label="Target Amount" type="number" step="0.01" min="0" placeholder="5000" required />
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Notes (optional)</label>
             <textarea
@@ -157,26 +181,36 @@ export default function ProjectsClient({ projects }: ProjectsClientProps) {
         </form>
       </Modal>
 
-      {/* Edit Modal */}
       {editingProject && (
         <Modal isOpen={!!editingProject} onClose={() => setEditingProject(null)} title="Edit Project" size="md">
           <form action={handleUpdate} className="space-y-4">
             <Input name="title" label="Project Title" defaultValue={editingProject.title} required />
-            <div className="grid grid-cols-2 gap-4">
-              <Input name="targetAmount" label="Target Amount" type="number" step="0.01" defaultValue={String(editingProject.targetAmount)} required />
-              <Input name="savedAmount" label="Saved Amount" type="number" step="0.01" defaultValue={String(editingProject.savedAmount)} />
-            </div>
+            <Input name="targetAmount" label="Target Amount" type="number" step="0.01" defaultValue={String(editingProject.targetAmount)} required />
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Status</label>
-              <select name="status" defaultValue={editingProject.status} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
-                <option value="PLANNED">PLANNED</option>
-                <option value="ONGOING">ONGOING</option>
-                <option value="COMPLETED">COMPLETED</option>
+              <select
+                name="status"
+                defaultValue={editingProject.status}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                {PROJECT_STATUSES.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
               </select>
             </div>
+            {editingProject.legacySavedAmount > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Legacy carryover: {formatCurrency(editingProject.legacySavedAmount)}. This remains read-only during the migration transition.
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Notes</label>
-              <textarea name="notes" rows={2} defaultValue={editingProject.notes ?? ""} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" />
+              <textarea
+                name="notes"
+                rows={2}
+                defaultValue={editingProject.notes ?? ""}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+              />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setEditingProject(null)}>Cancel</Button>

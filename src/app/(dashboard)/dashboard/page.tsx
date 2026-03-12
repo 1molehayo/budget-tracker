@@ -6,6 +6,27 @@ import { RecentMonths } from "@/components/dashboard/RecentMonths";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency } from "@/utils/format";
+import {
+  calculateProjectLinkedSavingsTotal,
+  calculateUsableGeneralSavingsPool,
+  groupIncomeBySource,
+  summarizeSavings,
+} from "@/utils/calculations";
+
+function getStatusVariant(status: string) {
+  switch (status) {
+    case "COMPLETED":
+      return "success";
+    case "READY":
+      return "purple";
+    case "PAUSED":
+      return "warning";
+    case "IN_PROGRESS":
+      return "info";
+    default:
+      return "default";
+  }
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -16,12 +37,13 @@ export default async function DashboardPage() {
   const [months, projects] = await Promise.all([
     prisma.month.findMany({
       where: { userId: user!.id },
-      include: { incomes: true, budgetLineItems: true, savings: true },
+      include: { incomes: { include: { tag: true } }, budgetLineItems: true, savings: { include: { tag: true } } },
       orderBy: [{ year: "desc" }, { month: "desc" }],
       take: 12,
     }),
     prisma.project.findMany({
       where: { userId: user!.id },
+      include: { savings: true },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
@@ -35,13 +57,31 @@ export default async function DashboardPage() {
     (sum, month) => sum + month.budgetLineItems.reduce((itemSum, item) => itemSum + item.amount, 0),
     0
   );
-  const totalSavings = months.reduce(
+  const totalSavingsEntered = months.reduce(
     (sum, month) => sum + month.savings.reduce((itemSum, item) => itemSum + item.amount, 0),
+    0
+  );
+  const usableGeneralPool = months.reduce(
+    (sum, month) => sum + calculateUsableGeneralSavingsPool(month.savings),
+    0
+  );
+  const totalProjectLinkedSavings = months.reduce(
+    (sum, month) => sum + calculateProjectLinkedSavingsTotal(month.savings),
     0
   );
 
   const avgIncome = months.length > 0 ? totalIncome / months.length : 0;
   const avgBudgetItems = months.length > 0 ? totalBudgetLineItems / months.length : 0;
+  const incomeSourceBreakdown = Object.entries(
+    months.reduce<Record<string, number>>((acc, month) => {
+      const monthSources = groupIncomeBySource(month.incomes);
+      for (const [key, value] of Object.entries(monthSources)) {
+        acc[key] = (acc[key] || 0) + value;
+      }
+      return acc;
+    }, {})
+  ).sort((a, b) => b[1] - a[1]);
+  const topIncomeSource = incomeSourceBreakdown[0];
 
   const recentMonths = months.slice(0, 6).map((month) => ({
     ...month,
@@ -59,7 +99,11 @@ export default async function DashboardPage() {
         <SummaryCard
           title="Avg Monthly Income"
           value={formatCurrency(avgIncome)}
-          subtitle={`Across ${months.length} months`}
+          subtitle={
+            topIncomeSource
+              ? `Across ${months.length} months · Top source: ${topIncomeSource[0]}`
+              : `Across ${months.length} months`
+          }
           gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
           iconBg="bg-white/20"
           icon={
@@ -81,9 +125,9 @@ export default async function DashboardPage() {
           }
         />
         <SummaryCard
-          title="Total Saved"
-          value={formatCurrency(totalSavings)}
-          subtitle="Across all months"
+          title="Usable General Pool"
+          value={formatCurrency(usableGeneralPool)}
+          subtitle={`Entered: ${formatCurrency(totalSavingsEntered)} | Project-linked: ${formatCurrency(totalProjectLinkedSavings)}`}
           gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
           iconBg="bg-white/20"
           icon={
@@ -141,15 +185,17 @@ export default async function DashboardPage() {
               ) : (
                 <div className="space-y-3">
                   {projects.map((project) => {
+                    const linkedSavings = calculateProjectLinkedSavingsTotal(project.savings ?? []);
+                    const projectSavingsSummary = summarizeSavings(project.savings ?? []);
                     const pct =
                       project.targetAmount > 0
-                        ? Math.min(100, Math.round((project.savedAmount / project.targetAmount) * 100))
+                        ? Math.min(100, Math.round((linkedSavings / project.targetAmount) * 100))
                         : 0;
                     return (
                       <div key={project.id} className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-900">{project.title}</span>
-                          <Badge variant={project.status === "COMPLETED" ? "success" : "info"}>
+                          <Badge variant={getStatusVariant(project.status)}>
                             {project.status}
                           </Badge>
                         </div>
@@ -160,9 +206,19 @@ export default async function DashboardPage() {
                           />
                         </div>
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>{formatCurrency(project.savedAmount)}</span>
+                          <span>{formatCurrency(linkedSavings)}</span>
                           <span>{formatCurrency(project.targetAmount)}</span>
                         </div>
+                        {projectSavingsSummary.totalEntered > 0 && (
+                          <p className="text-xs text-gray-500">
+                            Project-linked total: {formatCurrency(projectSavingsSummary.projectLinkedTotal)}
+                          </p>
+                        )}
+                        {project.legacySavedAmount > 0 && (
+                          <p className="text-xs text-amber-700">
+                            Legacy carryover: {formatCurrency(project.legacySavedAmount)}
+                          </p>
+                        )}
                       </div>
                     );
                   })}

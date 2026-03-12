@@ -44,7 +44,7 @@ export function MonthCard({ month }: MonthCardProps) {
           <p className="text-sm font-bold text-red-500">{formatCurrency(totalBudgetLineItems)}</p>
         </div>
         <div className="px-4 py-3 text-center">
-          <p className="text-xs text-gray-500 mb-0.5">Savings</p>
+          <p className="text-xs text-gray-500 mb-0.5">Savings Entered</p>
           <p className="text-sm font-bold text-blue-600">{formatCurrency(totalSavings)}</p>
         </div>
       </div>
