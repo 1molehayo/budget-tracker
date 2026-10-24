@@ -2,11 +2,11 @@
 
 Phase 3 is the current product: one authenticated user, monthly budgets, savings, projects, insights, and CSV export. The main V2 goal is multi-household support, so different households can manage budgets independently.
 
-This file sequences that work and the features already specified in [POST_MVP.md](POST_MVP.md). The milestones below are still planned. None of them have started. [STATUS.md](STATUS.md) describes what works today.
+This file sequences that work and the features already specified in [POST_MVP.md](POST_MVP.md). The milestones below are still planned. Milestone 1 has started: `pnpm test` covers the pure calculation and local-auth rules, and the rest of that milestone is open. [STATUS.md](STATUS.md) describes what works today.
 
 ## Milestone 1 — Confidence in the current app
 
-Make the single-user app safe to change before introducing households. Automated tests are not in the repository yet.
+`pnpm test` now covers pure savings, funding, lifecycle, and local-auth bypass rules. Make the rest of the single-user app safe to change before introducing households.
 
 Acceptance criteria:
 
@@ -42,7 +42,7 @@ Acceptance criteria:
 - A member can work with that household's budgets. A user who is not a member cannot.
 - Every budget and project server action checks membership and role on the server.
 - The interface has one active household at a time.
-- Local development without Supabase remains limited to development on this machine.
+- The local authentication bypass still requires `LOCAL_AUTH_BYPASS=true`, development mode, and a loopback host.
 
 ## Milestone 4 — Household-specific budgeting
 

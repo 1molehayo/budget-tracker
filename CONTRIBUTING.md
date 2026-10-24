@@ -20,7 +20,7 @@ pnpm dev
 
 Fill `DATABASE_URL` from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in `docker-compose.yaml`. The database is published only on `127.0.0.1:55433`.
 
-For local development without Supabase, leave the Supabase variables unset and open [http://127.0.0.1:3000](http://127.0.0.1:3000). In development, that uses the built-in local auth bypass.
+For local development without Supabase, set `LOCAL_AUTH_BYPASS=true` and open [http://127.0.0.1:3000](http://127.0.0.1:3000). That bypass stays off in production and for any non-loopback host. Leave the Supabase variables unset when you use it. If both Supabase variables are set, Supabase is used instead.
 
 `pnpm exec prisma migrate deploy` applies the migrations already in `prisma/migrations`. It does not create a new migration and it does not wipe existing rows. Do not run `prisma migrate reset` or `docker compose down -v` against a database whose records you need to keep.
 
@@ -47,6 +47,12 @@ Put a new money rule in the shared calculation helpers and call it from the serv
 - Do not add a dependency unless the current stack cannot do the job.
 - Do not log secrets, access tokens, or real financial records.
 
+## Tests
+
+`pnpm test` runs the Node.js test runner. The current tests cover savings totals, project funding, project lifecycle, and the local authentication bypass. They do not use a database.
+
+Server actions, pages, and database rules do not have automated tests yet. Exercise those in the browser when you change them. [ROADMAP.md](ROADMAP.md) still calls for that broader coverage.
+
 ## Branches and pull requests
 
 1. Branch from the latest default branch.
@@ -72,6 +78,7 @@ pnpm exec prisma generate
 pnpm exec prisma validate
 pnpm exec tsc --noEmit
 pnpm lint
+pnpm test
 pnpm build
 ```
 

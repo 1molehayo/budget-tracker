@@ -1,13 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import {
-  getLocalAuthUser,
-  getSupabaseEnv,
-  isLocalAuthBypassEnabled,
-} from "@/lib/supabase/local";
+import { cookies, headers } from "next/headers";
+import { getLocalAuthUser, isLocalAuthBypassEnabled } from "@/lib/supabase/local";
+import { getSupabaseEnv } from "@/lib/supabase/public-env";
 
 export async function createClient() {
-  if (isLocalAuthBypassEnabled()) {
+  const headerStore = await headers();
+
+  if (
+    isLocalAuthBypassEnabled({
+      host: headerStore.get("host"),
+      forwardedHost: headerStore.get("x-forwarded-host"),
+      forwardedFor: headerStore.get("x-forwarded-for"),
+    })
+  ) {
     const user = getLocalAuthUser();
 
     return {

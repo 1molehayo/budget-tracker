@@ -32,7 +32,8 @@ The MVP is complete when:
 - Docker Postgres is preferred for local database setup
 - Prisma + local PostgreSQL is the priority path
 - Do not block local MVP work on incomplete Supabase setup
-- If Supabase credentials are missing, complete all non-Supabase work first
+- Local development can run without Supabase when LOCAL_AUTH_BYPASS=true and the app is opened on localhost
+- The local auth bypass stays off in production and for any non-loopback host
 - Keep implementation simple and avoid unnecessary abstractions
 
 ## What matters most

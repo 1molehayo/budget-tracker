@@ -7,7 +7,7 @@ Phase 3 complete: month validation, schema refactor, tag wiring, savings rules, 
 - app boots locally
 - local Postgres works
 - Prisma validates
-- local development works without Supabase when the Supabase environment variables are omitted
+- local development works without Supabase when `LOCAL_AUTH_BYPASS=true` and the app is opened on localhost
 - dashboard loads
 - `.env.example` exists
 - `pnpm exec prisma migrate status` succeeds in the normal local environment

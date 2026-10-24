@@ -9,7 +9,7 @@ Contributors: [CONTRIBUTING.md](CONTRIBUTING.md). Planned work: [ROADMAP.md](ROA
 Implemented:
 
 - Supabase authentication at `/login` and `/signup`
-- Local development without Supabase when the Supabase environment variables are omitted in development
+- Local development without Supabase, only when `LOCAL_AUTH_BYPASS=true`, the server is running in development, and the app is opened on localhost
 - Monthly budgets for the current month or earlier, with a remaining-balance override
 - Income entries tagged `SALARY`, `GIG`, `GIFT`, `AJO_PAYOUT`, or `OTHER`
 - Budget line items
@@ -26,7 +26,7 @@ Income, budget line items, and savings can be added and deleted. Month labels, r
 Planned, and not implemented:
 
 - Multi-household budgets, membership, and roles
-- Automated tests and continuous integration
+- Server-action and database tests
 - Photo upload and OCR for handwritten records
 - CSV review and import
 
@@ -84,7 +84,13 @@ Set `DATABASE_URL` to the Docker user, password, and database:
 DATABASE_URL="postgresql://USER:PASSWORD@127.0.0.1:55433/budget_tracker"
 ```
 
-In development, omit the Supabase variables below to use the built-in local auth bypass. `pnpm dev` binds to `127.0.0.1` only.
+For local development without a Supabase project, set:
+
+```env
+LOCAL_AUTH_BYPASS="true"
+```
+
+`LOCAL_AUTH_BYPASS` is ignored in production. It is also ignored when the site is opened through any host other than `localhost`, `127.0.0.1`, or `::1`. `pnpm dev` binds to `127.0.0.1` only.
 
 Optional local user values:
 
@@ -93,12 +99,14 @@ LOCAL_DEV_USER_ID="local-dev-user"
 LOCAL_DEV_USER_EMAIL="local@example.com"
 ```
 
-To use Supabase instead, set both of these:
+To use Supabase instead, set both of these and leave the bypass unset or set it to any value other than `true`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 ```
+
+If those two Supabase variables are present, the local bypass stays off.
 
 4. Generate the Prisma client and apply the migrations already in `prisma/migrations`:
 
@@ -148,6 +156,7 @@ Dependencies keep their own licenses. Direct packages include MIT, Apache-2.0, I
 
 ## Notes
 
+- `pnpm test` checks savings, project funding, lifecycle rules, and the local authentication bypass. It does not need a database.
 - CSV export includes monthly totals, income, budget line items, savings, and project funding.
 - Multi-household support, server-action tests, photo upload, OCR, and CSV import are planned in [ROADMAP.md](ROADMAP.md). They are not part of the current app.
 - After changing the Docker port binding, recreate the database container so the new binding is applied. Keep the existing volume. Do not run `docker compose down -v`.
