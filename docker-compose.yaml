@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: budget_password
       POSTGRES_DB: budget_tracker
     ports:
-      - "55433:5432"
+      - "127.0.0.1:55433:5432"
     volumes:
       - budget_tracker_postgres_data:/var/lib/postgresql/data
 

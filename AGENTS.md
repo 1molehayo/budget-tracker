@@ -13,7 +13,7 @@ Core features:
 - users can add income entries
 - users can add expense entries
 - dashboard shows totals for income, expenses, and remaining balance
-- app includes seed data or demo data where helpful
+- a fresh local database starts empty; any demo seed must be opt-in and must not overwrite existing records
 - README contains exact run instructions
 
 ## Development priorities
@@ -22,6 +22,15 @@ Core features:
 3. Make CRUD work
 4. Fix obvious UX issues
 5. Only then consider refactors or polish
+
+## Development tools
+
+- Node.js and pnpm are pinned in `mise.toml`
+- Install them with `mise install`
+- Use pnpm for dependencies and scripts (`pnpm install`, `pnpm dev`, `pnpm exec prisma generate`)
+- Do not use npm, and do not add `package-lock.json`
+- Setup and pull request conventions are in `CONTRIBUTING.md`
+- Future milestones are in `ROADMAP.md`. Do not implement them unless the task asks for that milestone
 
 ## Technical rules
 - Keep the stack already present unless there is a clear reason to remove something

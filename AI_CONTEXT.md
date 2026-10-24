@@ -57,8 +57,10 @@ Priority order:
 Use the relevant commands below when needed:
 
 ```bash
-npm install
+mise install
+pnpm install
 docker compose up -d
-npx prisma generate
-npx prisma migrate dev --name init
-npm run dev
+pnpm exec prisma generate
+pnpm exec prisma migrate deploy
+pnpm dev
+```
