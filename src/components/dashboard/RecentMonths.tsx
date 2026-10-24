@@ -3,49 +3,34 @@ import type { Month } from "@/types";
 import { formatMonthYear, formatCurrency } from "@/utils/format";
 
 interface RecentMonthsProps {
-  months: (Month & {
-    totalIncome?: number;
-  })[];
+  months: (Month & { totalIncome?: number })[];
 }
 
 export function RecentMonths({ months }: RecentMonthsProps) {
   if (months.length === 0) {
-    return (
-      <div className="text-center py-8 text-gray-400">
-        <svg className="mx-auto h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <p className="text-sm">No months yet. Create your first month.</p>
-      </div>
-    );
+    return <p className="py-8 text-center text-sm text-foreground-secondary">No months yet. Create your first month.</p>;
   }
 
   return (
-    <div className="divide-y divide-gray-50">
+    <ul className="divide-y divide-border">
       {months.map((month) => (
-        <Link
-          key={month.id}
-          href={`/months/${month.id}`}
-          className="flex items-center justify-between py-3 hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
-              <span className="text-xs font-bold text-violet-700">
-                {new Date(month.year, month.month - 1).toLocaleString("en-US", { month: "short" })}
+        <li key={month.id}>
+          <Link
+            href={`/months/${month.id}`}
+            className="flex min-h-14 items-center justify-between gap-3 py-3"
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">{month.label}</span>
+              <span className="block text-xs text-foreground-secondary">
+                {formatMonthYear(month.year, month.month)}
               </span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">{month.label}</p>
-              <p className="text-xs text-gray-500">{formatMonthYear(month.year, month.month)}</p>
-            </div>
-          </div>
-          {month.totalIncome !== undefined && (
-            <span className="text-sm font-medium text-gray-900 hidden sm:block">
-              {formatCurrency(month.totalIncome)}
             </span>
-          )}
-        </Link>
+            {month.totalIncome !== undefined ? (
+              <span className="shrink-0 text-sm font-medium tabular-nums">{formatCurrency(month.totalIncome)}</span>
+            ) : null}
+          </Link>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

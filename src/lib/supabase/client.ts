@@ -1,13 +1,26 @@
 import { createBrowserClient } from "@supabase/ssr";
-import {
-  getLocalAuthUser,
-  getSupabaseEnv,
-  isLocalAuthBypassEnabled,
-} from "@/lib/supabase/local";
+import { isLoopbackRequest } from "@/lib/supabase/loopback";
+import { getSupabaseEnv, hasSupabaseEnv } from "@/lib/supabase/public-env";
+
+const localAuthUser = {
+  id: "local-dev-user",
+  email: "local@example.com",
+};
+
+function isBrowserLocalAuthBypassEnabled(host: string | null) {
+  return (
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_LOCAL_AUTH_BYPASS === "true" &&
+    !hasSupabaseEnv() &&
+    isLoopbackRequest({ host })
+  );
+}
 
 export function createClient() {
-  if (isLocalAuthBypassEnabled()) {
-    const user = getLocalAuthUser();
+  const host = typeof window !== "undefined" ? window.location.host : null;
+
+  if (isBrowserLocalAuthBypassEnabled(host)) {
+    const user = localAuthUser;
 
     return {
       auth: {

@@ -1,28 +1,31 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { ListIcon, SignOutIcon } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/Button";
+import { Avatar } from "@/foundations/ui/avatar/avatar";
+import { Button, IconButton } from "@/foundations/ui/button/button";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/months": "Monthly Budgets",
+  "/months": "Monthly budgets",
   "/projects": "Projects",
   "/insights": "Insights",
-  "/export": "Export Data",
+  "/export": "Export data",
 };
 
 function getPageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  if (pathname.match(/\/months\/[^/]+/)) return "Month Details";
+  if (pathname.match(/\/months\/[^/]+/)) return "Month details";
   return "Budget Tracker";
 }
 
 interface HeaderProps {
   userEmail?: string;
+  onOpenMenu: () => void;
 }
 
-export function Header({ userEmail }: HeaderProps) {
+export function Header({ userEmail, onOpenMenu }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const title = getPageTitle(pathname);
@@ -35,25 +38,41 @@ export function Header({ userEmail }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-gray-100 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          {userEmail && (
-            <span className="text-sm text-gray-500 hidden sm:block">{userEmail}</span>
-          )}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-            {userEmail?.[0]?.toUpperCase() ?? "U"}
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Sign out
-          </Button>
-        </div>
+    <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-sm">
+      <div className="flex min-h-14 items-center gap-2 px-3 sm:px-4">
+        <IconButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="md:hidden"
+          aria-label="Open navigation"
+          onClick={onOpenMenu}
+        >
+          <ListIcon className="size-5" />
+        </IconButton>
+        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h1>
+        {userEmail ? (
+          <span className="hidden max-w-56 truncate text-sm text-foreground-secondary lg:block">
+            {userEmail}
+          </span>
+        ) : null}
+        <Avatar size="sm" className="bg-accent text-accent-foreground" aria-label={userEmail ?? "Account"}>
+          <Avatar.Fallback>{userEmail?.[0]?.toUpperCase() ?? "U"}</Avatar.Fallback>
+        </Avatar>
+        <IconButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="sm:hidden"
+          aria-label="Sign out"
+          onClick={handleSignOut}
+        >
+          <SignOutIcon className="size-5" />
+        </IconButton>
+        <Button type="button" variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={handleSignOut}>
+          <SignOutIcon className="size-4" />
+          Sign out
+        </Button>
       </div>
     </header>
   );

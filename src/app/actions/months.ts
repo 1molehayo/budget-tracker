@@ -6,6 +6,7 @@ import type { TagCategory } from "@/types";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensureSystemTags } from "@/lib/tags";
+import { readBudgetLineItemAmount } from "@/utils/budget-line-item-amount";
 
 async function getUser() {
   const supabase = await createClient();
@@ -80,11 +81,11 @@ export async function createMonth(formData: FormData) {
   const month = Number(formData.get("month"));
 
   if (!label || !Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-    throw new Error("Invalid month data");
+    return { error: "Enter a label, month, and year." };
   }
 
   if (isFutureMonth(year, month)) {
-    throw new Error("Months can only be created for the current month or earlier");
+    return { error: "Months can only be created for the current month or earlier." };
   }
 
   const newMonth = await prisma.month.create({
@@ -150,11 +151,12 @@ export async function addIncome(formData: FormData) {
   await ensureSystemTags(user.id);
 
   const label = (formData.get("label") as string)?.trim();
-  const amount = Number(formData.get("amount"));
+  const rawAmount = formData.get("amount");
+  const amount = typeof rawAmount === "string" ? Number(rawAmount) : Number.NaN;
   const tagId = ((formData.get("tagId") as string) || "").trim();
 
-  if (!label || Number.isNaN(amount) || amount < 0) {
-    throw new Error("Invalid income data");
+  if (!label || typeof rawAmount !== "string" || rawAmount.trim() === "" || Number.isNaN(amount) || amount < 0) {
+    return { error: "Enter an income label and an amount of zero or more." };
   }
 
   if (!tagId) {
@@ -199,12 +201,18 @@ export async function addBudgetLineItem(monthId: string, formData: FormData) {
   await assertMonthOwnership(monthId, user.id);
 
   const label = (formData.get("label") as string)?.trim();
-  const amount = Number(formData.get("amount"));
+  const parsedAmount = readBudgetLineItemAmount(formData.get("amount"));
   const category = ((formData.get("category") as string) || null)?.trim() || null;
 
-  if (!label || Number.isNaN(amount)) {
-    throw new Error("Invalid budget line item data");
+  if (!label) {
+    return { error: "Enter a budget item description and amount." };
   }
+
+  if ("error" in parsedAmount) {
+    return parsedAmount;
+  }
+
+  const amount = parsedAmount.amount;
 
   await prisma.budgetLineItem.create({
     data: {
@@ -238,13 +246,14 @@ export async function addSaving(formData: FormData) {
   await ensureSystemTags(user.id);
 
   const label = (formData.get("label") as string)?.trim();
-  const amount = Number(formData.get("amount"));
+  const rawAmount = formData.get("amount");
+  const amount = typeof rawAmount === "string" ? Number(rawAmount) : Number.NaN;
   const destinationType = formData.get("destinationType") as string;
   const tagId = ((formData.get("tagId") as string) || "").trim() || null;
   const projectId = ((formData.get("projectId") as string) || "").trim() || null;
 
-  if (!label || Number.isNaN(amount) || amount < 0) {
-    throw new Error("Invalid saving data");
+  if (!label || typeof rawAmount !== "string" || rawAmount.trim() === "" || Number.isNaN(amount) || amount < 0) {
+    return { error: "Enter a savings label and an amount of zero or more." };
   }
 
   if (destinationType === "GENERAL") {

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Panel, PanelContent, PanelHeader, PanelTitle } from "@/components/ui/Panel";
 import { formatCurrency, formatShortMonth } from "@/utils/format";
 import { IncomeBudgetItemsChart } from "@/components/charts/IncomeBudgetItemsChart";
 import { SavingsAreaChart, SavingsPieChart } from "@/components/charts/SavingsChart";
@@ -90,115 +90,109 @@ export default async function InsightsPage() {
   );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Insights</h2>
-        <p className="text-gray-500 mt-1">Financial trends from {months.length} months</p>
+        <h2 className="text-2xl font-semibold">Insights</h2>
+        <p className="mt-1 text-sm text-foreground-secondary">Financial trends from {months.length} months</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Avg Income", value: formatCurrency(avgIncome), color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Avg Budget Items", value: formatCurrency(avgBudgetItems), color: "text-red-500", bg: "bg-red-50" },
-          {
-            label: "Avg Savings Entered",
-            value: formatCurrency(avgSavingsEntered),
-            color: "text-blue-600",
-            bg: "bg-blue-50",
-          },
-          {
-            label: "Avg Usable Pool",
-            value: formatCurrency(avgUsableGeneralPool),
-            color: "text-teal-700",
-            bg: "bg-teal-50",
-          },
+          { label: "Avg income", value: formatCurrency(avgIncome) },
+          { label: "Avg budget items", value: formatCurrency(avgBudgetItems) },
+          { label: "Avg savings entered", value: formatCurrency(avgSavingsEntered) },
+          { label: "Avg usable pool", value: formatCurrency(avgUsableGeneralPool) },
         ].map((kpi) => (
-          <div key={kpi.label} className={`${kpi.bg} rounded-2xl p-4`}>
-            <p className="text-xs font-medium text-gray-500">{kpi.label}</p>
-            <p className={`text-xl font-bold ${kpi.color} mt-1`}>{kpi.value}</p>
+          <div key={kpi.label} className="rounded-xl border border-border bg-background p-4">
+            <p className="text-xs font-medium text-foreground-secondary">{kpi.label}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{kpi.value}</p>
           </div>
         ))}
       </div>
 
       {months.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-16">
-            <p className="text-gray-400 text-sm">No months yet. Add months to see insights.</p>
-          </CardContent>
-        </Card>
+        <Panel>
+          <PanelContent className="py-16 text-center">
+            <p className="text-sm text-foreground-secondary">No months yet. Add months to see insights.</p>
+          </PanelContent>
+        </Panel>
       ) : (
         <>
-          <Card>
-            <CardHeader><CardTitle>Income vs Budget Items vs Savings Entered</CardTitle></CardHeader>
-            <CardContent>
+          <Panel>
+            <PanelHeader>
+              <PanelTitle>Income, budget items, and savings</PanelTitle>
+            </PanelHeader>
+            <PanelContent>
               <IncomeBudgetItemsChart data={chartData} />
-            </CardContent>
-          </Card>
+            </PanelContent>
+          </Panel>
 
-          <Card>
-            <CardHeader><CardTitle>Income Sources</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Panel>
+            <PanelHeader>
+              <PanelTitle>Income sources</PanelTitle>
+            </PanelHeader>
+            <PanelContent>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {incomeBreakdown.length === 0 ? (
-                  <div className="bg-gray-50 rounded-xl p-3 text-center sm:col-span-2 lg:col-span-4">
-                    <p className="text-xs text-gray-500">No income source tags recorded yet</p>
+                  <div className="rounded-lg bg-background-secondary p-3 text-center sm:col-span-2 lg:col-span-4">
+                    <p className="text-xs text-foreground-secondary">No income source tags recorded yet</p>
                   </div>
                 ) : (
                   incomeBreakdown.slice(0, 4).map((segment) => (
-                    <div key={segment.name} className="bg-emerald-50 rounded-xl p-3">
-                      <p className="text-xs text-emerald-700">{segment.name}</p>
-                      <p className="text-lg font-bold text-emerald-900 mt-1">
-                        {formatCurrency(segment.value)}
-                      </p>
+                    <div key={segment.name} className="rounded-lg bg-background-secondary p-3">
+                      <p className="text-xs text-foreground-secondary">{segment.name}</p>
+                      <p className="mt-1 text-lg font-semibold tabular-nums">{formatCurrency(segment.value)}</p>
                     </div>
                   ))
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </PanelContent>
+          </Panel>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader><CardTitle>Savings Entered Over Time</CardTitle></CardHeader>
-              <CardContent>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Panel>
+              <PanelHeader>
+                <PanelTitle>Savings entered over time</PanelTitle>
+              </PanelHeader>
+              <PanelContent>
                 <SavingsAreaChart data={chartData} />
-              </CardContent>
-            </Card>
+              </PanelContent>
+            </Panel>
 
-            <Card>
-              <CardHeader><CardTitle>Savings Breakdown</CardTitle></CardHeader>
-              <CardContent>
+            <Panel>
+              <PanelHeader>
+                <PanelTitle>Savings breakdown</PanelTitle>
+              </PanelHeader>
+              <PanelContent>
                 <SavingsPieChart data={savingsBreakdown} />
-                <div className="grid grid-cols-1 gap-3 mt-3">
-                  <div className="bg-teal-50 rounded-xl p-3 flex items-center justify-between">
-                    <p className="text-xs text-teal-800">Usable General Pool</p>
-                    <p className="text-sm font-bold text-teal-900">
-                      {formatCurrency(totalUsableGeneralPool)}
-                    </p>
+                <div className="mt-3 grid grid-cols-1 gap-3">
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary p-3">
+                    <p className="text-xs text-foreground-secondary">Usable general pool</p>
+                    <p className="text-sm font-semibold tabular-nums">{formatCurrency(totalUsableGeneralPool)}</p>
                   </div>
-                  <div className="bg-violet-50 rounded-xl p-3 flex items-center justify-between">
-                    <p className="text-xs text-violet-800">Active Project Funding</p>
-                    <p className="text-sm font-bold text-violet-900">{formatCurrency(totalProjectLinkedSavings)}</p>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary p-3">
+                    <p className="text-xs text-foreground-secondary">Active project funding</p>
+                    <p className="text-sm font-semibold tabular-nums">{formatCurrency(totalProjectLinkedSavings)}</p>
                   </div>
-                  <div className="bg-amber-50 rounded-xl p-3 flex items-center justify-between">
-                    <p className="text-xs text-amber-800">Excluded AJO Contribution</p>
-                    <p className="text-sm font-bold text-amber-900">{formatCurrency(excludedAjoContribution)}</p>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary p-3">
+                    <p className="text-xs text-foreground-secondary">Excluded AJO contribution</p>
+                    <p className="text-sm font-semibold tabular-nums">{formatCurrency(excludedAjoContribution)}</p>
                   </div>
                   {savingsBreakdown.length === 0 ? (
-                    <div className="bg-gray-50 rounded-xl p-3 text-center">
-                      <p className="text-xs text-gray-500">No savings breakdown yet</p>
+                    <div className="rounded-lg bg-background-secondary p-3 text-center">
+                      <p className="text-xs text-foreground-secondary">No savings breakdown yet</p>
                     </div>
                   ) : (
                     savingsBreakdown.slice(0, 4).map((segment) => (
-                      <div key={segment.name} className="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
-                        <p className="text-xs text-gray-500">{segment.name}</p>
-                        <p className="text-sm font-bold text-gray-900">{formatCurrency(segment.value)}</p>
+                      <div key={segment.name} className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary p-3">
+                        <p className="text-xs text-foreground-secondary">{segment.name}</p>
+                        <p className="text-sm font-semibold tabular-nums">{formatCurrency(segment.value)}</p>
                       </div>
                     ))
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </PanelContent>
+            </Panel>
           </div>
         </>
       )}

@@ -1,5 +1,7 @@
 # POST_MVP Roadmap
 
+The sequenced plan, including multi-household support, is in [ROADMAP.md](ROADMAP.md). This file keeps the original requirements for image upload, OCR, and CSV import.
+
 This file documents features that will be implemented after the MVP is complete.
 
 These features should NOT be implemented during MVP phases.

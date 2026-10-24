@@ -39,7 +39,7 @@ export async function createProject(formData: FormData) {
   const notes = ((formData.get("notes") as string) || "").trim() || null;
 
   if (!title || !Number.isFinite(targetAmount) || targetAmount <= 0) {
-    throw new Error("Invalid project data");
+    return { error: "Enter a project title and a target amount greater than zero." };
   }
 
   await prisma.project.create({
@@ -66,7 +66,7 @@ export async function updateProject(id: string, formData: FormData) {
   const rawStatus = ((formData.get("status") as string) || "AUTO").trim();
 
   if (!title || !Number.isFinite(targetAmount) || targetAmount <= 0) {
-    throw new Error("Invalid project data");
+    return { error: "Enter a project title and a target amount greater than zero." };
   }
 
   const fundedAmount = project.savings.reduce((sum, saving) => sum + saving.amount, 0);
@@ -77,7 +77,7 @@ export async function updateProject(id: string, formData: FormData) {
     status = "PAUSED";
   } else if (rawStatus === "COMPLETED") {
     if (!targetMet) {
-      throw new Error("Projects can only be marked COMPLETED after funding reaches the target");
+      return { error: "Projects can only be marked completed after funding reaches the target." };
     }
     status = "COMPLETED";
   } else if (rawStatus === "AUTO") {
@@ -98,7 +98,14 @@ export async function updateProject(id: string, formData: FormData) {
 
 export async function deleteProject(id: string) {
   const user = await getUser();
-  await assertProjectOwnership(id, user.id);
+  const project = await assertProjectOwnership(id, user.id);
+
+  if (project.savings.length > 0) {
+    return {
+      error: "Remove this project's linked savings before deleting it.",
+    };
+  }
+
   await prisma.project.delete({ where: { id } });
   revalidatePath("/projects");
   revalidatePath("/dashboard");

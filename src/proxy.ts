@@ -1,18 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  getLocalAuthUser,
-  getSupabaseEnv,
-  isLocalAuthBypassEnabled,
-} from "@/lib/supabase/local";
+import { getLocalAuthUser, isLocalAuthBypassEnabled } from "@/lib/supabase/local";
+import { getSupabaseEnv, hasSupabaseEnv } from "@/lib/supabase/public-env";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isPublicAsset = pathname.startsWith("/_next") || pathname.startsWith("/favicon");
   const isPublicRoute = pathname === "/health";
+  const localAuth = isLocalAuthBypassEnabled({
+    host: request.headers.get("host"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    forwardedFor: request.headers.get("x-forwarded-for"),
+  });
 
-  if (isLocalAuthBypassEnabled()) {
+  if (localAuth) {
     if (isAuthPage) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
@@ -25,6 +27,17 @@ export async function proxy(request: NextRequest) {
 
     getLocalAuthUser();
     return NextResponse.next({ request });
+  }
+
+  if (!hasSupabaseEnv()) {
+    if (isPublicAsset || isPublicRoute) {
+      return NextResponse.next({ request });
+    }
+
+    return new NextResponse("Authentication is unavailable for this host.", {
+      status: 403,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   }
 
   let supabaseResponse = NextResponse.next({ request });
