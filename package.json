@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --import ./scripts/register-test-alias.mjs --test src/utils/calculations.test.mts src/lib/supabase/local.test.mts"
+    "test": "node --experimental-strip-types --import ./scripts/register-test-alias.mjs --test src/utils/calculations.test.mts src/utils/budget-line-item-amount.test.mts src/lib/supabase/local.test.mts"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.20",

@@ -6,6 +6,7 @@ import type { TagCategory } from "@/types";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensureSystemTags } from "@/lib/tags";
+import { readBudgetLineItemAmount } from "@/utils/budget-line-item-amount";
 
 async function getUser() {
   const supabase = await createClient();
@@ -200,13 +201,18 @@ export async function addBudgetLineItem(monthId: string, formData: FormData) {
   await assertMonthOwnership(monthId, user.id);
 
   const label = (formData.get("label") as string)?.trim();
-  const rawAmount = formData.get("amount");
-  const amount = typeof rawAmount === "string" ? Number(rawAmount) : Number.NaN;
+  const parsedAmount = readBudgetLineItemAmount(formData.get("amount"));
   const category = ((formData.get("category") as string) || null)?.trim() || null;
 
-  if (!label || typeof rawAmount !== "string" || rawAmount.trim() === "" || Number.isNaN(amount)) {
+  if (!label) {
     return { error: "Enter a budget item description and amount." };
   }
+
+  if ("error" in parsedAmount) {
+    return parsedAmount;
+  }
+
+  const amount = parsedAmount.amount;
 
   await prisma.budgetLineItem.create({
     data: {
