@@ -16,7 +16,7 @@ import {
 import type { ChartBreakdownItem, ChartDataPoint } from "@/types";
 import { formatCurrency } from "@/utils/format";
 
-const PIE_COLORS = ["#7c3aed", "#14b8a6"];
+const PIE_COLORS = ["var(--color-accent)", "var(--color-chart-pool)"];
 
 const CustomTooltip = ({ active, payload, label }: {
   active?: boolean;
@@ -38,20 +38,20 @@ export function SavingsAreaChart({ data }: { data: ChartDataPoint[] }) {
       <AreaChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
         <defs>
           <linearGradient id="savingsGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
+            <stop offset="5%" stopColor="var(--color-chart-savings-bar)" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="var(--color-chart-savings-bar)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "var(--color-chart-axis)" }} axisLine={false} tickLine={false} />
         <YAxis
-          tick={{ fontSize: 11, fill: "#6b7280" }}
+          tick={{ fontSize: 11, fill: "var(--color-chart-axis)" }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Area type="monotone" dataKey="savings" stroke="#3b82f6" strokeWidth={2} fill="url(#savingsGrad)" name="Savings" />
+        <Area type="monotone" dataKey="savings" stroke="var(--color-chart-savings)" strokeWidth={2} fill="url(#savingsGrad)" name="Savings" />
       </AreaChart>
     </ResponsiveContainer>
   );

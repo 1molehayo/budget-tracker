@@ -41,19 +41,19 @@ export function IncomeBudgetItemsChart({ data }: IncomeBudgetItemsChartProps) {
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "var(--color-chart-axis)" }} axisLine={false} tickLine={false} />
         <YAxis
-          tick={{ fontSize: 11, fill: "#6b7280" }}
+          tick={{ fontSize: 11, fill: "var(--color-chart-axis)" }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
         />
         <Tooltip content={<CustomTooltip />} />
         <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }} />
-        <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" />
-        <Bar dataKey="budgetItems" fill="#f87171" radius={[4, 4, 0, 0]} name="Budget Items" />
-        <Bar dataKey="savings" fill="#60a5fa" radius={[4, 4, 0, 0]} name="Savings" />
+        <Bar dataKey="income" fill="var(--color-chart-income)" radius={[4, 4, 0, 0]} name="Income" />
+        <Bar dataKey="budgetItems" fill="var(--color-chart-budget-bar)" radius={[4, 4, 0, 0]} name="Budget Items" />
+        <Bar dataKey="savings" fill="var(--color-chart-savings-bar)" radius={[4, 4, 0, 0]} name="Savings" />
       </BarChart>
     </ResponsiveContainer>
   );

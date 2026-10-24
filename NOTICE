@@ -1,0 +1,54 @@
+# Third-party notices
+
+Budget Tracker is GPL-3.0-only. Copyright (C) 2026 Olusegun Omilabu.
+
+## Significa Foundations
+
+The files below were adapted from Significa Foundations:
+
+- Project: https://github.com/significa/foundations
+- Documentation: https://foundations.significa.co
+- License: GPL-3.0-only
+- Upstream commit tree inspected: main, October 2026
+
+Each adapted file keeps a header pointing at that project. Original paths:
+
+- `src/foundations/components/slot/slot.tsx` from `src/foundations/components/slot/slot.tsx`
+- `src/foundations/hooks/use-element-size/use-element-size.ts` from `src/foundations/hooks/use-element-size/use-element-size.ts`
+- `src/foundations/hooks/use-element-transition/use-element-transition.ts` from `src/foundations/hooks/use-element-transition/use-element-transition.ts`
+- `src/foundations/hooks/use-stable-callback/use-stable-callback.ts` from `src/foundations/hooks/use-stable-callback/use-stable-callback.ts`
+- `src/foundations/hooks/use-top-layer/use-top-layer.ts` from `src/foundations/hooks/use-top-layer/use-top-layer.ts`
+- `src/foundations/ui/avatar/avatar.tsx` from `src/foundations/ui/avatar/avatar.tsx`
+- `src/foundations/ui/badge/badge.tsx` from `src/foundations/ui/badge/badge.tsx`
+- `src/foundations/ui/button/button.tsx` from `src/foundations/ui/button/button.tsx`
+- `src/foundations/ui/checkbox/checkbox.tsx` from `src/foundations/ui/checkbox/checkbox.tsx`
+- `src/foundations/ui/dialog/dialog.tsx` from `src/foundations/ui/dialog/dialog.tsx`
+- `src/foundations/ui/divider/divider.tsx` from `src/foundations/ui/divider/divider.tsx`
+- `src/foundations/ui/drawer/drawer.tsx` from `src/foundations/ui/drawer/drawer.tsx`
+- `src/foundations/ui/field/field.tsx` from `src/foundations/ui/field/field.tsx`
+- `src/foundations/ui/input/input.tsx` from `src/foundations/ui/input/input.tsx`
+- `src/foundations/ui/menu/menu.tsx` from `src/foundations/ui/menu/menu.tsx`
+- `src/foundations/ui/modal/modal.tsx` from `src/foundations/ui/modal/modal.tsx`
+- `src/foundations/ui/number-input/number-input.tsx` from `src/foundations/ui/number-input/number-input.tsx`
+- `src/foundations/ui/popover/popover.tsx` from `src/foundations/ui/popover/popover.tsx`
+- `src/foundations/ui/portal/portal.tsx` from `src/foundations/ui/portal/portal.tsx`
+- `src/foundations/ui/progress/progress.tsx` from `src/foundations/ui/progress/progress.tsx`
+- `src/foundations/ui/select/select.tsx` from `src/foundations/ui/select/select.tsx`
+- `src/foundations/ui/skeleton/skeleton.tsx` from `src/foundations/ui/skeleton/skeleton.tsx`
+- `src/foundations/ui/spinner/spinner.tsx` from `src/foundations/ui/spinner/spinner.tsx`
+- `src/foundations/ui/table/table.tsx` from `src/foundations/ui/table/table.tsx`
+- `src/foundations/ui/tabs/tabs.tsx` from `src/foundations/ui/tabs/tabs.tsx`
+- `src/foundations/ui/textarea/textarea.tsx` from `src/foundations/ui/textarea/textarea.tsx`
+- `src/foundations/ui/toaster/toaster.tsx` from `src/foundations/ui/toaster/toaster.tsx`
+- `src/foundations/ui/tooltip/tooltip.tsx` from `src/foundations/ui/tooltip/tooltip.tsx`
+- `src/foundations/utils/compose-refs/compose-refs.ts` from `src/foundations/utils/compose-refs/compose-refs.ts`
+- `src/foundations/utils/dom/next-frame.ts` from `src/foundations/utils/dom/next-frame.ts`
+- `src/lib/utils/classnames.ts` from `src/lib/utils/classnames.ts`
+
+## Packages added for these components
+
+- `cva` — utility used by Foundations class variants
+- `@phosphor-icons/react` — MIT icons used by Foundations components
+- `@floating-ui/react` — MIT positioning used by Menu, Popover, and Tooltip
+
+Those packages keep their own licenses and are not relicensed by this notice.

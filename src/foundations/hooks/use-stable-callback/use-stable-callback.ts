@@ -1,0 +1,32 @@
+"use client";
+
+/**
+ * Adapted from Significa Foundations.
+ * License: GPL-3.0-only
+ * https://github.com/significa/foundations
+ */
+
+import { useCallback, useEffect, useRef } from "react";
+
+// biome-ignore lint/suspicious/noExplicitAny: expected
+type AnyFunction = (...args: any[]) => any;
+
+export const useStableCallback = <T extends AnyFunction>(callback?: T) => {
+  const callbackRef = useRef<T | undefined>(callback);
+
+  // Update the ref if the callback changes
+  useEffect(() => {
+    if (callback) {
+      callbackRef.current = callback;
+    }
+  }, [callback]);
+
+  // Return a stable function that always calls the latest callback if it exists
+  const stableCallback = useCallback((...args: Parameters<T>) => {
+    if (callbackRef.current) {
+      callbackRef.current(...args);
+    }
+  }, []);
+
+  return stableCallback;
+};

@@ -6,10 +6,13 @@ import type { MonthWithDetails, ProjectSummary, SavingDestinationType, Tag } fro
 import { IncomeTable } from "@/components/months/IncomeTable";
 import { BudgetLineItemsTable } from "@/components/months/BudgetLineItemsTable";
 import { SavingsTable } from "@/components/months/SavingsTable";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Panel, PanelContent, PanelHeader, PanelTitle } from "@/components/ui/Panel";
+import { Button } from "@/foundations/ui/button/button";
+import { Field } from "@/foundations/ui/field/field";
+import { Input } from "@/foundations/ui/input/input";
+import { Select } from "@/foundations/ui/select/select";
 import { formatCurrency, formatMonthYear } from "@/utils/format";
+import { readActionError } from "@/lib/read-action-error";
 import { summarizeSavings } from "@/utils/calculations";
 import { getTagDisplayName } from "@/utils/tags";
 import {
@@ -42,6 +45,17 @@ interface MonthDetailsClientProps {
   projects: ProjectSummary[];
 }
 
+function MoneyField({ name, label }: { name: string; label: string }) {
+  return (
+    <Field>
+      <Field.Label>{label}</Field.Label>
+      <Field.Control>
+        <Input name={name} type="number" inputMode="decimal" min="0" step="0.01" required />
+      </Field.Control>
+    </Field>
+  );
+}
+
 export function MonthDetailsClient({
   month,
   incomeTags,
@@ -52,6 +66,9 @@ export function MonthDetailsClient({
   const defaultSavingsTagId = savingsTags.find((tag) => tag.code === "OTHER")?.id ?? savingsTags[0]?.id ?? "";
   const defaultProjectId = projects[0]?.id ?? "";
   const [isPending, startTransition] = useTransition();
+  const [incomeError, setIncomeError] = useState("");
+  const [budgetError, setBudgetError] = useState("");
+  const [savingError, setSavingError] = useState("");
   const [overrideInput, setOverrideInput] = useState(
     month.remainingBalanceOverride === null || month.remainingBalanceOverride === undefined
       ? ""
@@ -78,6 +95,30 @@ export function MonthDetailsClient({
     month.remainingBalanceOverride === null || month.remainingBalanceOverride === undefined
       ? computedRemaining
       : month.remainingBalanceOverride;
+
+  function submitIncome(formData: FormData) {
+    setIncomeError("");
+    startTransition(async () => {
+      const error = readActionError(await addIncome(formData));
+      if (error) setIncomeError(error);
+    });
+  }
+
+  function submitBudgetItem(formData: FormData) {
+    setBudgetError("");
+    startTransition(async () => {
+      const error = readActionError(await addBudgetLineItem(month.id, formData));
+      if (error) setBudgetError(error);
+    });
+  }
+
+  function submitSaving(formData: FormData) {
+    setSavingError("");
+    startTransition(async () => {
+      const error = readActionError(await addSaving(formData));
+      if (error) setSavingError(error);
+    });
+  }
 
   function handleDeleteIncome(id: string) {
     startTransition(() => deleteIncome(id, month.id));
@@ -121,254 +162,285 @@ export function MonthDetailsClient({
         : "Project-linked savings fund the selected project only and do not increase the usable general pool.";
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <Link href="/months" className="text-gray-400 hover:text-gray-600 text-sm">
-            ← Months
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <Link href="/months" className="text-sm text-foreground-secondary">
+            Months
           </Link>
-          <h2 className="text-2xl font-bold text-gray-900 mt-1">{month.label}</h2>
-          <p className="text-gray-500">{formatMonthYear(month.year, month.month)}</p>
+          <h2 className="mt-1 truncate text-2xl font-semibold">{month.label}</h2>
+          <p className="text-sm text-foreground-secondary">{formatMonthYear(month.year, month.month)}</p>
         </div>
         <form action={deleteMonth.bind(null, month.id)}>
-          <Button type="submit" variant="danger">Delete Month</Button>
+          <Button type="submit" variant="destructive">
+            Delete month
+          </Button>
         </form>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Month Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={updateMonth} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <Panel>
+        <PanelHeader>
+          <PanelTitle>Month details</PanelTitle>
+        </PanelHeader>
+        <PanelContent>
+          <form action={updateMonth} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <input type="hidden" name="id" value={month.id} />
-            <Input name="label" label="Label" defaultValue={month.label} required />
-            <Input
-              name="remainingBalanceOverride"
-              label="Remaining Balance Override"
-              type="number"
-              step="0.01"
-              value={overrideInput}
-              onChange={(e) => setOverrideInput(e.target.value)}
-              helperText={`Computed: ${formatCurrency(computedRemaining)}. Leave empty to use computed value.`}
-            />
-            <div className="sm:col-span-2 flex justify-end">
-              <Button type="submit" loading={isPending}>Save Month</Button>
+            <Field>
+              <Field.Label>Label</Field.Label>
+              <Field.Control>
+                <Input name="label" defaultValue={month.label} required />
+              </Field.Control>
+            </Field>
+            <Field>
+              <Field.Label>Remaining balance override</Field.Label>
+              <Field.Control>
+                <Input
+                  name="remainingBalanceOverride"
+                  type="number"
+                  step="0.01"
+                  value={overrideInput}
+                  onChange={(e) => setOverrideInput(e.target.value)}
+                />
+              </Field.Control>
+              <Field.Description>
+                Computed {formatCurrency(computedRemaining)}. Leave empty to use the computed value.
+              </Field.Description>
+            </Field>
+            <div className="lg:col-span-2 lg:flex lg:justify-end">
+              <Button type="submit" isLoading={isPending}>
+                Save month
+              </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </PanelContent>
+      </Panel>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Income</CardTitle>
-            <span className="text-sm font-semibold text-emerald-600">{formatCurrency(totalIncome)}</span>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Panel>
+        <PanelHeader>
+          <PanelTitle>Income</PanelTitle>
+          <span className="text-sm font-semibold tabular-nums text-success">{formatCurrency(totalIncome)}</span>
+        </PanelHeader>
+        <PanelContent className="space-y-4">
           <IncomeTable incomes={month.incomes} showActions onDelete={handleDeleteIncome} />
-          <form action={addIncome} className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100">
+          <form
+            key={`income-${month.incomes.length}`}
+            action={submitIncome}
+            className="grid grid-cols-1 gap-3 border-t border-border pt-4 md:grid-cols-2 xl:grid-cols-4"
+          >
             <input type="hidden" name="monthId" value={month.id} />
-            <Input name="label" placeholder="Salary, freelance, gift..." required />
-            <Input name="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600" htmlFor="income-tag-id">
-                Income Source Tag
-              </label>
-              <select
-                id="income-tag-id"
-                name="tagId"
-                value={selectedIncomeTagId}
-                onChange={(e) => setSelectedIncomeTagId(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                required
-              >
-                {incomeTags.length === 0 ? (
-                  <option value="">No income tags available</option>
-                ) : (
-                  incomeTags.map((tag) => (
-                    <option key={tag.id} value={tag.id}>
-                      {getTagDisplayName(tag)}
-                    </option>
-                    ))
-                )}
-              </select>
-              <p className="text-xs text-gray-500">{incomeHelperText}</p>
-            </div>
-            <Button
-              type="submit"
-              variant="secondary"
-              size="sm"
-              className="self-end"
-              disabled={!canSubmitIncome}
-            >
-              Add Income
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Budget Line Items</CardTitle>
-            <span className="text-sm font-semibold text-red-500">{formatCurrency(totalBudgetLineItems)}</span>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <BudgetLineItemsTable lineItems={month.budgetLineItems} showActions onDelete={handleDeleteBudgetItem} />
-          <form action={addBudgetLineItem.bind(null, month.id)} className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100">
-            <Input name="label" placeholder="Description" required />
-            <Input name="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
-            <div className="flex flex-col gap-1">
-              <select
-                name="category"
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="">No category</option>
-                {BUDGET_ITEM_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
-            <Button type="submit" variant="danger" size="sm" className="self-end">Add Item</Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Savings</CardTitle>
-            <div className="text-right">
-              <span className="text-sm font-semibold text-blue-600">{formatCurrency(totalSavings)}</span>
-              <p className="text-xs text-gray-500">
-                Usable pool: {formatCurrency(savingsSummary.usableGeneralPool)}
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <SavingsTable savings={month.savings} showActions onDelete={handleDeleteSaving} />
-          <form action={addSaving} className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-2 border-t border-gray-100">
-            <input type="hidden" name="monthId" value={month.id} />
-            <Input name="label" placeholder="Label" required />
-            <Input name="amount" type="number" step="0.01" min="0" placeholder="Amount" required />
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600" htmlFor="saving-destination-type">
-                Destination
-              </label>
-              <select
-                id="saving-destination-type"
-                name="destinationType"
-                value={savingDestination}
-                onChange={(e) => setSavingDestination(e.target.value as SavingDestinationType)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="GENERAL">General Pool</option>
-                <option value="PROJECT">Project Funding</option>
-              </select>
-            </div>
-            {savingDestination === "GENERAL" ? (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600" htmlFor="saving-tag-id">
-                  Savings Tag
-                </label>
-                <select
-                  id="saving-tag-id"
+            <Field>
+              <Field.Label>Entry</Field.Label>
+              <Field.Control>
+                <Input name="label" placeholder="Salary, freelance, gift" required />
+              </Field.Control>
+            </Field>
+            <MoneyField name="amount" label="Amount" />
+            <Field>
+              <Field.Label>Income source</Field.Label>
+              <Field.Control>
+                <Select
                   name="tagId"
-                  value={selectedSavingsTagId}
-                  onChange={(e) => setSelectedSavingsTagId(e.target.value)}
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={selectedIncomeTagId}
+                  onChange={(e) => setSelectedIncomeTagId(e.target.value)}
                   required
                 >
-                  {savingsTags.length === 0 ? (
-                    <option value="">No savings tags available</option>
+                  {incomeTags.length === 0 ? (
+                    <option value="">No income tags available</option>
                   ) : (
-                    savingsTags.map((tag) => (
+                    incomeTags.map((tag) => (
                       <option key={tag.id} value={tag.id}>
                         {getTagDisplayName(tag)}
                       </option>
                     ))
                   )}
-                </select>
-                <input type="hidden" name="projectId" value="" />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600" htmlFor="saving-project-id">
-                  Project
-                </label>
-                <select
-                  id="saving-project-id"
-                  name="projectId"
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  required
-                >
-                  {projects.length === 0 ? (
-                    <option value="">No projects available</option>
-                  ) : (
-                    projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.title}
-                      </option>
-                    ))
-                  )}
-                </select>
-                <input type="hidden" name="tagId" value="" />
-              </div>
-            )}
-            <div className="flex flex-col justify-end gap-1">
-              <Button type="submit" size="sm" disabled={!canSubmitSaving}>Add Saving</Button>
-              <p className="text-xs text-gray-500">{savingsHelperText}</p>
+                </Select>
+              </Field.Control>
+              <Field.Description>{incomeHelperText}</Field.Description>
+              {incomeError ? <Field.Error>{incomeError}</Field.Error> : null}
+            </Field>
+            <div className="md:self-end">
+              <Button type="submit" variant="outline" disabled={!canSubmitIncome} className="w-full">
+                Add income
+              </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </PanelContent>
+      </Panel>
 
-      <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-5 border border-violet-100">
-        <h3 className="font-semibold text-violet-900 mb-3">Balance Summary</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
-          <div>
-            <p className="text-gray-500">Income</p>
-            <p className="font-bold text-emerald-600 text-lg">{formatCurrency(totalIncome)}</p>
-          </div>
-          <div>
-            <p className="text-gray-500">Budget Items</p>
-            <p className="font-bold text-red-500 text-lg">{formatCurrency(totalBudgetLineItems)}</p>
-          </div>
-          <div>
-            <p className="text-gray-500">Savings Entered</p>
-            <p className="font-bold text-blue-600 text-lg">{formatCurrency(totalSavings)}</p>
-          </div>
-          <div>
-            <p className="text-gray-500">Usable Pool</p>
-            <p className="font-bold text-teal-700 text-lg">
-              {formatCurrency(savingsSummary.usableGeneralPool)}
+      <Panel>
+        <PanelHeader>
+          <PanelTitle>Budget line items</PanelTitle>
+          <span className="text-sm font-semibold tabular-nums text-error">{formatCurrency(totalBudgetLineItems)}</span>
+        </PanelHeader>
+        <PanelContent className="space-y-4">
+          <BudgetLineItemsTable lineItems={month.budgetLineItems} showActions onDelete={handleDeleteBudgetItem} />
+          <form
+            key={`items-${month.budgetLineItems.length}`}
+            action={submitBudgetItem}
+            className="grid grid-cols-1 gap-3 border-t border-border pt-4 md:grid-cols-2 xl:grid-cols-4"
+          >
+            <Field>
+              <Field.Label>Description</Field.Label>
+              <Field.Control>
+                <Input name="label" placeholder="Description" required />
+              </Field.Control>
+            </Field>
+            <MoneyField name="amount" label="Amount" />
+            <Field>
+              <Field.Label>Category</Field.Label>
+              <Field.Control>
+                <Select name="category" defaultValue="">
+                  <option value="">No category</option>
+                  {BUDGET_ITEM_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </Select>
+              </Field.Control>
+            </Field>
+            <div className="md:self-end">
+              <Button type="submit" variant="outline" className="w-full">
+                Add item
+              </Button>
+              {budgetError ? <p className="mt-2 text-sm text-error" role="alert">{budgetError}</p> : null}
+            </div>
+          </form>
+        </PanelContent>
+      </Panel>
+
+      <Panel>
+        <PanelHeader>
+          <PanelTitle>Savings</PanelTitle>
+          <div className="text-right">
+            <span className="text-sm font-semibold tabular-nums">{formatCurrency(totalSavings)}</span>
+            <p className="text-xs text-foreground-secondary">
+              Usable pool {formatCurrency(savingsSummary.usableGeneralPool)}
             </p>
           </div>
+        </PanelHeader>
+        <PanelContent className="space-y-4">
+          <SavingsTable savings={month.savings} showActions onDelete={handleDeleteSaving} />
+          <form
+            key={`savings-${month.savings.length}`}
+            action={submitSaving}
+            className="grid grid-cols-1 gap-3 border-t border-border pt-4 md:grid-cols-2 xl:grid-cols-5"
+          >
+            <input type="hidden" name="monthId" value={month.id} />
+            <Field>
+              <Field.Label>Label</Field.Label>
+              <Field.Control>
+                <Input name="label" placeholder="Label" required />
+              </Field.Control>
+            </Field>
+            <MoneyField name="amount" label="Amount" />
+            <Field>
+              <Field.Label>Destination</Field.Label>
+              <Field.Control>
+                <Select
+                  name="destinationType"
+                  value={savingDestination}
+                  onChange={(e) => setSavingDestination(e.target.value as SavingDestinationType)}
+                >
+                  <option value="GENERAL">General pool</option>
+                  <option value="PROJECT">Project funding</option>
+                </Select>
+              </Field.Control>
+            </Field>
+            {savingDestination === "GENERAL" ? (
+              <Field>
+                <Field.Label>Savings tag</Field.Label>
+                <Field.Control>
+                  <Select
+                    name="tagId"
+                    value={selectedSavingsTagId}
+                    onChange={(e) => setSelectedSavingsTagId(e.target.value)}
+                    required
+                  >
+                    {savingsTags.length === 0 ? (
+                      <option value="">No savings tags available</option>
+                    ) : (
+                      savingsTags.map((tag) => (
+                        <option key={tag.id} value={tag.id}>
+                          {getTagDisplayName(tag)}
+                        </option>
+                      ))
+                    )}
+                  </Select>
+                </Field.Control>
+                <input type="hidden" name="projectId" value="" />
+              </Field>
+            ) : (
+              <Field>
+                <Field.Label>Project</Field.Label>
+                <Field.Control>
+                  <Select
+                    name="projectId"
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    required
+                  >
+                    {projects.length === 0 ? (
+                      <option value="">No projects available</option>
+                    ) : (
+                      projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.title}
+                        </option>
+                      ))
+                    )}
+                  </Select>
+                </Field.Control>
+                <input type="hidden" name="tagId" value="" />
+              </Field>
+            )}
+            <div className="flex flex-col justify-end gap-2">
+              <Button type="submit" disabled={!canSubmitSaving}>
+                Add saving
+              </Button>
+              <p className="text-xs text-foreground-secondary">{savingsHelperText}</p>
+              {savingError ? <p className="text-sm text-error" role="alert">{savingError}</p> : null}
+            </div>
+          </form>
+        </PanelContent>
+      </Panel>
+
+      <section className="rounded-xl border border-border bg-background p-4">
+        <h3 className="mb-3 font-semibold">Balance summary</h3>
+        <dl className="grid grid-cols-1 gap-4 text-sm min-[420px]:grid-cols-2 xl:grid-cols-3">
           <div>
-            <p className="text-gray-500">Project-linked</p>
-            <p className="font-bold text-violet-700 text-lg">
-              {formatCurrency(savingsSummary.projectLinkedTotal)}
-            </p>
+            <dt className="text-foreground-secondary">Income</dt>
+            <dd className="text-lg font-semibold tabular-nums text-success">{formatCurrency(totalIncome)}</dd>
           </div>
           <div>
-            <p className="text-gray-500">Remaining</p>
-            <p className={`font-bold text-lg ${finalRemaining >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+            <dt className="text-foreground-secondary">Budget items</dt>
+            <dd className="text-lg font-semibold tabular-nums text-error">{formatCurrency(totalBudgetLineItems)}</dd>
+          </div>
+          <div>
+            <dt className="text-foreground-secondary">Savings entered</dt>
+            <dd className="text-lg font-semibold tabular-nums">{formatCurrency(totalSavings)}</dd>
+          </div>
+          <div>
+            <dt className="text-foreground-secondary">Usable pool</dt>
+            <dd className="text-lg font-semibold tabular-nums">{formatCurrency(savingsSummary.usableGeneralPool)}</dd>
+          </div>
+          <div>
+            <dt className="text-foreground-secondary">Project-linked</dt>
+            <dd className="text-lg font-semibold tabular-nums">{formatCurrency(savingsSummary.projectLinkedTotal)}</dd>
+          </div>
+          <div>
+            <dt className="text-foreground-secondary">Remaining</dt>
+            <dd className={`text-lg font-semibold tabular-nums ${finalRemaining >= 0 ? "text-success" : "text-error"}`}>
               {formatCurrency(finalRemaining)}
-            </p>
+            </dd>
           </div>
-        </div>
-        {savingsSummary.excludedGeneralTotal > 0 && (
-          <p className="mt-3 text-xs text-amber-700">
-            AJO Contribution excluded from usable pool: {formatCurrency(savingsSummary.excludedGeneralTotal)}
+        </dl>
+        {savingsSummary.excludedGeneralTotal > 0 ? (
+          <p className="mt-3 text-xs text-warning">
+            AJO contribution excluded from the usable pool: {formatCurrency(savingsSummary.excludedGeneralTotal)}
           </p>
-        )}
-      </div>
+        ) : null}
+      </section>
     </div>
   );
 }

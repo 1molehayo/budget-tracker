@@ -1,5 +1,8 @@
+import { TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import type { Income } from "@/types";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/foundations/ui/badge/badge";
+import { IconButton } from "@/foundations/ui/button/button";
+import { Table } from "@/foundations/ui/table/table";
 import { formatCurrency } from "@/utils/format";
 import { getTagDisplayName } from "@/utils/tags";
 
@@ -9,66 +12,78 @@ interface IncomeTableProps {
   onDelete?: (id: string) => void;
 }
 
-export function IncomeTable({ incomes, showActions, onDelete }: IncomeTableProps) {
-  const total = incomes.reduce((sum, i) => sum + i.amount, 0);
+export function IncomeTable({
+  incomes,
+  showActions,
+  onDelete,
+}: IncomeTableProps) {
+  const total = incomes.reduce((sum, item) => sum + item.amount, 0);
 
   if (incomes.length === 0) {
-    return <p className="text-sm text-gray-400 italic py-4 text-center">No income entries yet.</p>;
+    return (
+      <p className="py-6 text-center text-sm text-foreground-secondary">
+        No income entries yet.
+      </p>
+    );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-100">
-            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Entry
-            </th>
-            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Income Source
-            </th>
-            <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount</th>
-            {showActions && <th className="w-12" />}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
+    <Table.Container>
+      <Table className="min-w-xl" density="sm">
+        <Table.Caption className="sr-only">Income entries</Table.Caption>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Entry</Table.Head>
+            <Table.Head>Income source</Table.Head>
+            <Table.Head align="end">Amount</Table.Head>
+            {showActions ? (
+              <Table.Head className="w-14">
+                <span className="sr-only">Actions</span>
+              </Table.Head>
+            ) : null}
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {incomes.map((income) => (
-            <tr key={income.id} className="hover:bg-gray-50/50">
-              <td className="py-2.5 px-3">
-                <div className="font-medium text-gray-900">{income.label}</div>
-                <p className="text-xs text-gray-500">Tagged income source entry</p>
-              </td>
-              <td className="py-2.5 px-3 text-gray-500">
-                <Badge variant="success">{getTagDisplayName(income.tag)}</Badge>
-              </td>
-              <td className="py-2.5 px-3 text-right font-semibold text-emerald-600">
+            <Table.Row key={income.id}>
+              <Table.Cell className="font-medium">{income.label}</Table.Cell>
+              <Table.Cell>
+                <Badge size="sm" variant="success">
+                  {getTagDisplayName(income.tag)}
+                </Badge>
+              </Table.Cell>
+              <Table.Cell
+                align="end"
+                className="font-semibold tabular-nums text-success"
+              >
                 {formatCurrency(income.amount)}
-              </td>
-              {showActions && onDelete && (
-                <td className="py-2.5 px-3">
-                  <button
+              </Table.Cell>
+              {showActions && onDelete ? (
+                <Table.Cell align="end">
+                  <IconButton
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Delete income ${income.label}`}
                     onClick={() => onDelete(income.id)}
-                    className="text-gray-300 hover:text-red-500 transition-colors"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </td>
-              )}
-            </tr>
+                    <TrashIcon className="size-4" />
+                  </IconButton>
+                </Table.Cell>
+              ) : null}
+            </Table.Row>
           ))}
-        </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-gray-100">
-            <td className="py-2.5 px-3 font-semibold text-gray-700" colSpan={2}>Total</td>
-            <td className="py-2.5 px-3 text-right font-bold text-emerald-700 text-base">
+        </Table.Body>
+        <Table.Footer>
+          <Table.Row>
+            <Table.Cell colSpan={2}>Total</Table.Cell>
+            <Table.Cell align="end" className="tabular-nums text-success">
               {formatCurrency(total)}
-            </td>
-            {showActions && <td />}
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+            </Table.Cell>
+            {showActions ? <Table.Cell /> : null}
+          </Table.Row>
+        </Table.Footer>
+      </Table>
+    </Table.Container>
   );
 }

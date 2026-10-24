@@ -152,7 +152,9 @@ Support is optional. The public PayPal.Me link used for donations is [paypal.me/
 
 Budget Tracker is licensed under GPL-3.0-only. Copyright (C) 2026 Olusegun Omilabu. See [LICENSE](LICENSE).
 
-Dependencies keep their own licenses. Direct packages include MIT, Apache-2.0, ISC, and BSD-2-Clause. Next.js can install LGPL-3.0 libvips binaries for image optimization. Those binaries remain under their own license and are not part of this repository's source.
+The interface includes components adapted from [Significa Foundations](https://github.com/significa/foundations), which is also GPL-3.0-only. Adapted files and their original paths are listed in [NOTICE](NOTICE).
+
+Other dependencies keep their own licenses. Direct packages include MIT, Apache-2.0, ISC, and BSD-2-Clause. Next.js can install LGPL-3.0 libvips binaries for image optimization. Those binaries remain under their own license and are not part of this repository's source.
 
 ## Notes
 

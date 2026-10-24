@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import type { MonthWithDetails } from "@/types";
-import { Button } from "@/components/ui/Button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Panel, PanelContent, PanelHeader, PanelTitle } from "@/components/ui/Panel";
+import { Button } from "@/foundations/ui/button/button";
+import { Checkbox } from "@/foundations/ui/checkbox/checkbox";
 import { formatMonthYear, formatCurrency } from "@/utils/format";
 import { exportMonthsToCsv, downloadCsv } from "@/utils/csvExport";
 
@@ -19,7 +21,6 @@ export default function ExportClient({ months }: ExportClientProps) {
       setSelected(new Set());
       return;
     }
-
     setSelected(new Set(months.map((month) => month.id)));
   }
 
@@ -36,79 +37,66 @@ export default function ExportClient({ months }: ExportClientProps) {
   function handleExport() {
     const toExport = months.filter((month) => selected.has(month.id));
     if (toExport.length === 0) return;
-
     const csv = exportMonthsToCsv(toExport);
     const date = new Date().toISOString().slice(0, 10);
     downloadCsv(csv, `budget-export-${date}.csv`);
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Export Data</h2>
-        <p className="text-gray-500 mt-1">Download your budget data as CSV</p>
+        <h2 className="text-2xl font-semibold">Export data</h2>
+        <p className="mt-1 text-sm text-foreground-secondary">Download your budget data as CSV</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Select Months</CardTitle>
-            <button
-              onClick={toggleAll}
-              className="text-sm text-violet-600 hover:text-violet-700 font-medium"
-            >
-              {selected.size === months.length ? "Deselect all" : "Select all"}
-            </button>
-          </div>
-        </CardHeader>
-        <CardContent>
+      <Panel>
+        <PanelHeader>
+          <PanelTitle>Select months</PanelTitle>
+          <Button type="button" variant="ghost" size="sm" onClick={toggleAll}>
+            {selected.size === months.length && months.length > 0 ? "Deselect all" : "Select all"}
+          </Button>
+        </PanelHeader>
+        <PanelContent>
           {months.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-8">No months available to export.</p>
+            <p className="py-8 text-center text-sm text-foreground-secondary">No months available to export.</p>
           ) : (
-            <div className="space-y-2">
+            <ul className="space-y-2">
               {months.map((month) => {
                 const totalIncome = month.incomes.reduce((sum, item) => sum + item.amount, 0);
                 const isSelected = selected.has(month.id);
-
                 return (
-                  <label
-                    key={month.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-violet-400 bg-violet-50"
-                        : "border-transparent bg-gray-50 hover:border-gray-200"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleMonth(month.id)}
-                      className="w-4 h-4 text-violet-600 rounded"
-                    />
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900 text-sm">{month.label}</span>
-                      <div className="text-xs text-gray-500">{formatMonthYear(month.year, month.month)}</div>
-                    </div>
-                    <span className="text-sm font-semibold text-emerald-600">
-                      {formatCurrency(totalIncome)}
-                    </span>
-                  </label>
+                  <li key={month.id}>
+                    <label
+                      className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border p-3 ${
+                        isSelected ? "border-accent bg-accent/5" : "border-border"
+                      }`}
+                    >
+                      <Checkbox checked={isSelected} onChange={() => toggleMonth(month.id)} aria-label={month.label} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{month.label}</span>
+                        <span className="block text-xs text-foreground-secondary">
+                          {formatMonthYear(month.year, month.month)}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums text-success">
+                        {formatCurrency(totalIncome)}
+                      </span>
+                    </label>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
-        </CardContent>
-      </Card>
+        </PanelContent>
+      </Panel>
 
-      <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-medium text-gray-900">{selected.size} months selected</p>
-          <p className="text-sm text-gray-500">CSV includes income, budget line items, and savings details</p>
+          <p className="font-medium">{selected.size} months selected</p>
+          <p className="text-sm text-foreground-secondary">CSV includes income, budget line items, and savings</p>
         </div>
-        <Button onClick={handleExport} disabled={selected.size === 0} size="lg">
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
+        <Button onClick={handleExport} disabled={selected.size === 0}>
+          <DownloadSimpleIcon className="size-4" />
           Export CSV
         </Button>
       </div>

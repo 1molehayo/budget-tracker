@@ -1,17 +1,127 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --text-2xs: 0.625rem;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --color-background: #ffffff;
+  --color-background-secondary: #f9fafb;
+  --color-foreground: #111827;
+  --color-foreground-secondary: #6b7280;
+  --color-accent: #7c3aed;
+  --color-accent-foreground: #ffffff;
+  --color-border: #e5e7eb;
+  --color-ring: color-mix(in oklab, #8b5cf6 45%, transparent);
+  --color-error: #dc2626;
+  --color-warning: #d97706;
+  --color-success: #059669;
+  --color-info: #2563eb;
+  --color-teal: #14b8a6;
+  --color-sidebar: #4c1d95;
+  --color-sidebar-mid: #5b21b6;
+  --color-sidebar-muted: #ddd6fe;
+  --color-sidebar-icon: #c4b5fd;
+  --color-mark: #6ee7b7;
+  --color-chart-income: #10b981;
+  --color-chart-income-to: #0d9488;
+  --color-chart-budget: #f43f5e;
+  --color-chart-budget-bar: #f87171;
+  --color-chart-budget-to: #db2777;
+  --color-chart-savings: #3b82f6;
+  --color-chart-savings-to: #4f46e5;
+  --color-chart-savings-bar: #60a5fa;
+  --color-chart-project: #8b5cf6;
+  --color-chart-project-to: #9333ea;
+  --color-chart-pool: #14b8a6;
+  --color-chart-grid: #f0f0f0;
+  --color-chart-axis: #6b7280;
+
+  --radius: 0.125rem;
+  --radius-bump: 1;
+  --radius-xs: calc(var(--radius) * 1 * var(--radius-bump));
+  --radius-sm: calc(var(--radius) * 2 * var(--radius-bump));
+  --radius-md: calc(var(--radius) * 3 * var(--radius-bump));
+  --radius-lg: calc(var(--radius) * 4 * var(--radius-bump));
+  --radius-xl: calc(var(--radius) * 6 * var(--radius-bump));
+  --radius-2xl: calc(var(--radius) * 8 * var(--radius-bump));
+  --radius-3xl: calc(var(--radius) * 12 * var(--radius-bump));
+  --radius-4xl: calc(var(--radius) * 16 * var(--radius-bump));
+  --inset: calc(var(--radius) * 1.5 * var(--radius-bump));
+  --ring-width: 3px;
+  --corner-shape: round;
+
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.04), 0 2px 4px oklch(0 0 0 / 0.03);
+  --shadow-md: 0 2px 3px oklch(0 0 0 / 0.04), 0 3px 6px oklch(0 0 0 / 0.03);
+  --shadow-lg: 0 2px 4px oklch(0 0 0 / 0.04), 0 8px 16px oklch(0 0 0 / 0.04);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --animate-spinner-dot: spinner-dot 1.4s ease-in-out infinite both;
+  --animate-spinner-bar: spinner-bar 1.2s ease-in-out infinite both;
+
+  @keyframes spinner-dot {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes spinner-bar {
+    0%,
+    40%,
+    100% {
+      transform: scaleY(0.4);
+    }
+    20% {
+      transform: scaleY(1);
+    }
+  }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@utility mix-with-* {
+  --color-mix-with: --value(--color-*, [*]);
+}
+
+@utility border-mix-* {
+  border-color: color-mix(
+    in oklab,
+    --value(--color-*, [*]),
+    var(--color-mix-with, var(--color-foreground)) calc(--modifier(integer) * 1%)
+  );
+}
+
+@utility bg-mix-* {
+  background-color: color-mix(
+    in oklab,
+    --value(--color-*, [*]),
+    var(--color-mix-with, var(--color-foreground)) calc(--modifier(integer) * 1%)
+  );
+}
+
+* {
+  corner-shape: var(--corner-shape);
+}
+
+.rounded-full {
+  corner-shape: round;
+}
+
+:root {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+body:has(dialog[open]) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
 }
