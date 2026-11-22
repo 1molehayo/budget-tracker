@@ -1,6 +1,8 @@
 # Third-party notices
 
-Budget Tracker. Copyright (C) 2026 Olusegun Omilabu.
+Budget Tracker
+Copyright (c) 2026 Olusegun Omilabu
+Licensed under the MIT License. See LICENSE.
 
 ## UI primitives
 
@@ -15,14 +17,11 @@ Icons are provided by Phosphor Icons (MIT):
 - https://phosphoricons.com
 - https://github.com/phosphor-icons/react
 
-Class-variance helpers use `cva` (Apache-2.0) with `tailwind-merge` (MIT) and `clsx` (MIT).
+Class-variance helpers use `cva` (Apache-2.0) with `tailwind-merge` (MIT) and
+`clsx` (MIT).
 
-Development and test tooling used by this repository includes React Testing Library (MIT), jsdom (MIT), Playwright (Apache-2.0), and tsx (MIT). Those packages are not part of the runtime application bundle.
+Development and test tooling used by this repository includes React Testing
+Library (MIT), jsdom (MIT), Playwright (Apache-2.0), and tsx (MIT). Those
+packages are not part of the runtime application bundle.
 
 Those packages keep their own licenses and are not relicensed by this notice.
-
-## Historical note
-
-Earlier versions of this repository included source adapted from Significa
-Foundations (GPL-3.0-only). That adapted source has been removed from the
-current tree. Historical Git commits may still contain it.

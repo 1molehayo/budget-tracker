@@ -1,6 +1,6 @@
 # Contributing
 
-Budget Tracker is a small household budget app licensed under GPL-3.0-only. Contributions are accepted under that license. Keep changes small, typed, and easy to review. The product plan is in [ROADMAP.md](ROADMAP.md). Do not start a roadmap milestone unless the issue or pull request asks for it.
+Budget Tracker is a small household budget app licensed under the MIT License. Contributions are accepted under that license. Keep changes small, typed, and easy to review. The product plan is in [ROADMAP.md](ROADMAP.md). Do not start a roadmap milestone unless the issue or pull request asks for it.
 
 ## Local setup
 

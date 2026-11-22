@@ -151,11 +151,9 @@ Support is optional. The public PayPal.Me link used for donations is [paypal.me/
 
 ## License
 
-Budget Tracker is currently licensed under GPL-3.0-only. Copyright (C) 2026 Olusegun Omilabu. See [LICENSE](LICENSE).
+Budget Tracker is licensed under the MIT License. Copyright (c) 2026 Olusegun Omilabu. See [LICENSE](LICENSE).
 
-The current UI uses independently styled wrappers over [Radix UI Primitives](https://www.radix-ui.com/primitives) (MIT), Phosphor Icons (MIT), and `cva` (Apache-2.0). See [NOTICE](NOTICE).
-
-A move to the MIT licence is planned after the Foundations-removal audit is complete. The `LICENSE` file is intentionally unchanged until that final step.
+The UI uses independently styled wrappers over [Radix UI Primitives](https://www.radix-ui.com/primitives) (MIT), Phosphor Icons (MIT), and `cva` (Apache-2.0). Third-party notices are in [NOTICE](NOTICE).
 
 Other dependencies keep their own licenses. Direct packages include MIT, Apache-2.0, ISC, and BSD-2-Clause. Next.js can install LGPL-3.0 libvips binaries for image optimization. Those binaries remain under their own license and are not part of this repository's source.
 
