@@ -49,9 +49,11 @@ Put a new money rule in the shared calculation helpers and call it from the serv
 
 ## Tests
 
-`pnpm test` runs the Node.js test runner. The current tests cover savings totals, project funding, project lifecycle, and the local authentication bypass. They do not use a database.
+`pnpm test` runs unit tests plus React Testing Library interaction tests for Dialog, Drawer, Checkbox, Field, and Toast. Those suites do not need a database.
 
-Server actions, pages, and database rules do not have automated tests yet. Exercise those in the browser when you change them. [ROADMAP.md](ROADMAP.md) still calls for that broader coverage.
+`pnpm test:e2e` runs Playwright overlay checks against the local Next.js server. First install the browser once with `pnpm test:e2e:install`. The drawer and projects dialog cases need Docker Postgres running under `LOCAL_AUTH_BYPASS`.
+
+Server actions, pages, and database rules still need broader automated coverage. Exercise those flows in the browser when you change them. [ROADMAP.md](ROADMAP.md) still calls for that work.
 
 ## Branches and pull requests
 
@@ -79,10 +81,9 @@ pnpm exec prisma validate
 pnpm exec tsc --noEmit
 pnpm lint
 pnpm test
+pnpm test:e2e
 pnpm build
 ```
-
-`pnpm lint` currently reports two existing unused-variable warnings, in `src/app/(auth)/signup/page.tsx` and `src/components/ui/Modal.tsx`.
 
 When the change touches persisted data, also apply the existing migrations and use the local app:
 

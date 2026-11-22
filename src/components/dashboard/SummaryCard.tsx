@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils/classnames";
+import { cn } from "@/lib/utils";
 
 const tones = {
   income: "bg-gradient-to-br from-chart-income to-chart-income-to",

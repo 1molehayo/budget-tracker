@@ -1,8 +1,8 @@
 import { TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import type { Income } from "@/types";
-import { Badge } from "@/foundations/ui/badge/badge";
-import { IconButton } from "@/foundations/ui/button/button";
-import { Table } from "@/foundations/ui/table/table";
+import { Badge } from "@/components/ui/badge";
+import { IconButton } from "@/components/ui/button";
+import { Table } from "@/components/ui/table";
 import { formatCurrency } from "@/utils/format";
 import { getTagDisplayName } from "@/utils/tags";
 

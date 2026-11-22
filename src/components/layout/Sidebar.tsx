@@ -10,7 +10,7 @@ import {
   HouseIcon,
   PlusIcon,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils/classnames";
+import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HouseIcon },

@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils/classnames";
+import { cn } from "@/lib/utils";
 
 export function Panel({ className, ...props }: React.ComponentPropsWithRef<"section">) {
   return (
@@ -12,7 +12,10 @@ export function Panel({ className, ...props }: React.ComponentPropsWithRef<"sect
 export function PanelHeader({ className, ...props }: React.ComponentPropsWithRef<"div">) {
   return (
     <div
-      className={cn("flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3", className)}
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3",
+        className,
+      )}
       {...props}
     />
   );

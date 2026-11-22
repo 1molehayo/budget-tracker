@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/foundations/ui/button/button";
-import { Field } from "@/foundations/ui/field/field";
-import { Input } from "@/foundations/ui/input/input";
-import { Select } from "@/foundations/ui/select/select";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { createMonth } from "@/app/actions/months";
 import { readActionError } from "@/lib/read-action-error";
 

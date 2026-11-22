@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Drawer } from "@/foundations/ui/drawer/drawer";
-import { Toaster } from "@/foundations/ui/toaster/toaster";
+import { Drawer } from "@/components/ui/drawer";
+import { Toaster } from "@/components/ui/toast";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 

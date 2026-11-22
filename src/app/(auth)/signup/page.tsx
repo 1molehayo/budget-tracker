@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/foundations/ui/button/button";
-import { Field } from "@/foundations/ui/field/field";
-import { Input } from "@/foundations/ui/input/input";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");

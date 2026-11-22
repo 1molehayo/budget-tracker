@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { RecentMonths } from "@/components/dashboard/RecentMonths";
 import { Panel, PanelContent, PanelHeader, PanelTitle } from "@/components/ui/Panel";
-import { Badge } from "@/foundations/ui/badge/badge";
-import { Progress } from "@/foundations/ui/progress/progress";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/utils/format";
 import {
   calculateUsableGeneralSavingsPool,

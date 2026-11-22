@@ -4,8 +4,8 @@ import { useState } from "react";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import type { MonthWithDetails } from "@/types";
 import { Panel, PanelContent, PanelHeader, PanelTitle } from "@/components/ui/Panel";
-import { Button } from "@/foundations/ui/button/button";
-import { Checkbox } from "@/foundations/ui/checkbox/checkbox";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatMonthYear, formatCurrency } from "@/utils/format";
 import { exportMonthsToCsv, downloadCsv } from "@/utils/csvExport";
 
@@ -71,7 +71,11 @@ export default function ExportClient({ months }: ExportClientProps) {
                         isSelected ? "border-accent bg-accent/5" : "border-border"
                       }`}
                     >
-                      <Checkbox checked={isSelected} onChange={() => toggleMonth(month.id)} aria-label={month.label} />
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleMonth(month.id)}
+                        aria-label={month.label}
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{month.label}</span>
                         <span className="block text-xs text-foreground-secondary">
