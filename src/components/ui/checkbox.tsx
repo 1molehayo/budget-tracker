@@ -1,7 +1,6 @@
 "use client";
 
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { CheckIcon } from "@phosphor-icons/react";
 import { cn, cva } from "@/lib/utils";
 
 const checkboxStyle = cva({
@@ -14,6 +13,26 @@ const checkboxStyle = cva({
   ],
 });
 
+function CheckMark({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3.5 8.5 6.5 11.5 12.5 4.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
 export type CheckboxProps = React.ComponentPropsWithRef<typeof CheckboxPrimitive.Root>;
 
 export function Checkbox({ className, ref, ...props }: CheckboxProps) {
@@ -24,7 +43,7 @@ export function Checkbox({ className, ref, ...props }: CheckboxProps) {
       {...props}
     >
       <CheckboxPrimitive.Indicator className="flex items-center justify-center text-accent-foreground">
-        <CheckIcon className="size-3.5" weight="bold" />
+        <CheckMark className="size-3.5" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );
