@@ -3,8 +3,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import { ListIcon, SignOutIcon } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { Avatar } from "@/foundations/ui/avatar/avatar";
-import { Button, IconButton } from "@/foundations/ui/button/button";
+import { Avatar } from "@/components/ui/avatar";
+import { Button, IconButton } from "@/components/ui/button";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",

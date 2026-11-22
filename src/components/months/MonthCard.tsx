@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Month } from "@/types";
-import { Button } from "@/foundations/ui/button/button";
+import { Button } from "@/components/ui/button";
 import { formatMonthYear, formatCurrency } from "@/utils/format";
 
 interface MonthCardProps {

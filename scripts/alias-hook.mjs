@@ -1,10 +1,23 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const srcRoot = path.join(process.cwd(), "src");
+const phosphorStub = pathToFileURL(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "phosphor-stub.mjs"),
+).href;
 
 export async function resolve(specifier, context, nextResolve) {
+  if (
+    specifier === "@phosphor-icons/react" ||
+    specifier.startsWith("@phosphor-icons/react/")
+  ) {
+    return {
+      shortCircuit: true,
+      url: phosphorStub,
+    };
+  }
+
   if (!specifier.startsWith("@/")) {
     return nextResolve(specifier, context);
   }

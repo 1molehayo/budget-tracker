@@ -49,6 +49,7 @@ See [ROADMAP.md](ROADMAP.md). Image upload and CSV import details remain in [POS
 - Next.js (App Router)
 - TypeScript
 - Tailwind CSS
+- Radix UI Primitives
 - Prisma ORM + PostgreSQL
 - Supabase Auth
 - Recharts
@@ -150,15 +151,16 @@ Support is optional. The public PayPal.Me link used for donations is [paypal.me/
 
 ## License
 
-Budget Tracker is licensed under GPL-3.0-only. Copyright (C) 2026 Olusegun Omilabu. See [LICENSE](LICENSE).
+Budget Tracker is licensed under the MIT License. Copyright (c) 2026 Olusegun Omilabu. See [LICENSE](LICENSE).
 
-The interface includes components adapted from [Significa Foundations](https://github.com/significa/foundations), which is also GPL-3.0-only. Adapted files and their original paths are listed in [NOTICE](NOTICE).
+The UI uses independently styled wrappers over [Radix UI Primitives](https://www.radix-ui.com/primitives) (MIT), Phosphor Icons (MIT), and `cva` (Apache-2.0). Third-party notices are in [NOTICE](NOTICE).
 
 Other dependencies keep their own licenses. Direct packages include MIT, Apache-2.0, ISC, and BSD-2-Clause. Next.js can install LGPL-3.0 libvips binaries for image optimization. Those binaries remain under their own license and are not part of this repository's source.
 
 ## Notes
 
-- `pnpm test` checks savings, project funding, lifecycle rules, and the local authentication bypass. It does not need a database.
+- `pnpm test` checks savings, project funding, lifecycle rules, local authentication bypass, and UI interaction coverage for Dialog, Drawer, Checkbox, Field, and Toast. It does not need a database.
+- `pnpm test:e2e` runs Playwright overlay checks. Drawer and projects dialog cases need Docker Postgres.
 - CSV export includes monthly totals, income, budget line items, savings, and project funding.
 - Multi-household support, server-action tests, photo upload, OCR, and CSV import are planned in [ROADMAP.md](ROADMAP.md). They are not part of the current app.
 - After changing the Docker port binding, recreate the database container so the new binding is applied. Keep the existing volume. Do not run `docker compose down -v`.
